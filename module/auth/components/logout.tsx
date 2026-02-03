@@ -11,17 +11,25 @@ const Logout = ({
     className?:string
 }) => {
     const router = useRouter();
-  return (
-    <span className={className} onClick={()=>signOut({
-        fetchOptions: {
-            onSuccess:()=> {
-                router.push("/login");
+    
+    const handleLogout = async () => {
+        await signOut({
+            fetchOptions: {
+                onSuccess: () => {
+                    router.push("/login");
+                }
             }
-        }
-    })}
+        });
+    };
+
+  return (
+    <button 
+        type="button"
+        className={className} 
+        onClick={handleLogout}
     >
         {children}
-    </span>
+    </button>
   )
 }
 
