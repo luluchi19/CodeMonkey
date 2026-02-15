@@ -29,22 +29,22 @@ export async function fetchUserContribution(token:string, username: string) {
     const octokit = new Octokit({ auth: token });
 
     const query = `
-    query($username: String!) {
-        user(login: $username) {
-            contributionCollection {
-                contributionCalendar {
-                    totalContributions
-                    weeks {
-                        contributionDays {
-                            contributionCount
-                            data
-                            color
+        query($username: String!) {
+            user(login: $username) {
+                contributionsCollection {
+                    contributionCalendar {
+                        totalContributions
+                        weeks {
+                            contributionDays {
+                                contributionCount
+                                date
+                                color
+                            }
                         }
                     }
                 }
             }
         }
-    }
     `;
 
     
@@ -54,10 +54,11 @@ export async function fetchUserContribution(token:string, username: string) {
             username
         })
 
-        return response.user.contributionCollection.contributionCalendar;
+        return response.user.contributionsCollection.contributionCalendar;
     }
     catch(error){
-
+        console.error("Error fetching user contribution:", error);
+        throw error;
     }
 
 }
