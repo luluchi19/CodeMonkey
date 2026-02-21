@@ -26,10 +26,18 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  
+
   sessions      Session[]
   accounts      Account[]
   repositories   Repository[]
 
+  usage         UserUsage?
+  subscriptionTier String    @default("FREE") // free, pro, enterprise
+  subscriptionStatus String?    // ACTIVE, CANCELED, EXPIRED
+  polarCustomerId String?  @unique     // For Stripe integration
+  polarSubscriptionId String?  @unique    // For Stripe integration
   @@unique([email])
   @@map("user")
 }
@@ -67,6 +75,17 @@ model Review {
   @@map("review")
 }
 
+model UserUsage {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repositoryCount Int    @default(0)
+  reviewCounts  Json     @default("{}") // {"repoId":count}
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("user_usage")
+}
 
 model Session {
   id        String   @id
