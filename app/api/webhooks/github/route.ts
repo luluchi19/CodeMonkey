@@ -15,13 +15,13 @@ export async function POST(req: NextRequest) {
       const action = body.action;
       const repo = body.repository.full_name;
       const prNumber = body.number;
+      console.log(`Pull request webhook: action=${action} repo=${repo} pr=${prNumber}`);
 
       const [owner , repoName]= repo.split("/")
 
       if(action === "opened" || action === "synchronize"){
-        reviewPullRequest(owner , repoName , prNumber)
-        .then(()=>console.log(` Review completed for ${repo} #${prNumber}`))
-        .catch((error)=>console.log(` Review failed for ${repo} #${prNumber}: ${error}`))
+        await reviewPullRequest(owner , repoName , prNumber)
+        console.log(`Review requested for ${repo} #${prNumber}`)
       }
 
     }

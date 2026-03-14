@@ -1,7 +1,6 @@
 import prisma from "@/lib/db";
 import { inngest } from "../client";
-import { getRepoFileContents } from "@/module/github/lib/github";
-import { indexCodebase } from "@/module/ai/lib/rag";
+import { postToPythonSidecar } from "@/lib/python-sidecar";
 
 export const indexRepo = inngest.createFunction(
   { id: "index-repo" },
@@ -10,9 +9,7 @@ export const indexRepo = inngest.createFunction(
   async ({ event, step }) => {
     const { owner, repo, userId } = event.data
 
-    // files
-    const files = await step.run("fetch-files", async () => {
-
+    const token = await step.run("resolve-token", async () => {
       const account = await prisma.account.findFirst({
         where: {
           userId: userId,
@@ -20,17 +17,22 @@ export const indexRepo = inngest.createFunction(
         },
       })
 
-      if(!account?.accessToken){
+      if (!account?.accessToken) {
         throw new Error("No Github access token found for user")
       }
 
-      return await getRepoFileContents(account.accessToken, owner, repo);
+      return account.accessToken
     })
 
-    await step.run("index-codebase", async () => {
-      return await indexCodebase(`${owner}/${repo}`, files);
+    await step.run("forward-to-python", async () => {
+      return await postToPythonSidecar("/inngest/repo-index", {
+        owner,
+        repo,
+        userId,
+        token,
+      })
     })
 
-    return { success: true , indexedFiles: files.length}
+    return { success: true, forwarded: true }
   }
 )
