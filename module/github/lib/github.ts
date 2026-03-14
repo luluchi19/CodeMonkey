@@ -86,18 +86,36 @@ export const createWebhook = async (owner: string, repo: string) => {
   const octokit = new Octokit({ auth: token });
 
   const webhookUrl = `${process.env.NEXT_PUBLIC_APP_BASE_URL}/api/webhooks/github`;
+  const webhookPath = "/api/webhooks/github";
 
   const { data: hooks } = await octokit.rest.repos.listWebhooks({
     owner,
     repo,
   });
 
-  const existingHook = hooks.find(
-    (hook) => hook.config.url === webhookUrl
-  );
-
+  const existingHook = hooks.find((hook) => hook.config.url === webhookUrl);
   if (existingHook) {
     return existingHook;
+  }
+
+  const previousHook = hooks.find((hook) => {
+    const url = hook.config.url;
+    return typeof url === "string" && url.endsWith(webhookPath);
+  });
+
+  if (previousHook) {
+    const { data } = await octokit.rest.repos.updateWebhook({
+      owner,
+      repo,
+      hook_id: previousHook.id,
+      config: {
+        url: webhookUrl,
+        content_type: "json",
+      },
+      events: ["pull_request"],
+    });
+
+    return data;
   }
 
   const { data } = await octokit.rest.repos.createWebhook({

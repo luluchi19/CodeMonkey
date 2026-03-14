@@ -67,6 +67,9 @@ model Review {
   prTitle      String
   prUrl        String
   review       String     @db.Text
+  inputTokens  Int?
+  outputTokens Int?
+  estimatedCost Float?
   status       String     @default("completed") // completed, failed, pending
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
