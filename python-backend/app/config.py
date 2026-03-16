@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     cost_input_per_1k: float = 0.0
     cost_output_per_1k: float = 0.0
     max_prompt_tokens_estimate: int = 8000
-    max_output_tokens_estimate: int = 2000
+    max_output_tokens_estimate: int = 4000
     app_base_url: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

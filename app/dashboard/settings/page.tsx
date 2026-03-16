@@ -2,6 +2,7 @@
 
 import { ProfileForm } from '@/module/settings/components/profile-form';
 import { RepositoryList } from '@/module/settings/components/repository-list';
+import { ReviewLanguageForm } from '@/module/settings/components/review-language-form';
 import React from 'react'
 
 const SettingPage = () => {
@@ -12,6 +13,7 @@ const SettingPage = () => {
         <p className="text-muted-foreground">Manage your account settings and connected repositories</p>
       </div>
       <ProfileForm />
+      <ReviewLanguageForm />
       <RepositoryList />
     </div>
   )

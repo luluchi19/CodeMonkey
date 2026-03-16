@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     outputTokens?: number;
     estimatedCost?: number;
     status?: string;
+    reviewId?: string;
   };
 
   const repository = await prisma.repository.findFirst({
@@ -50,19 +51,43 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Repository not found" }, { status: 404 });
   }
 
-  const review = await prisma.review.create({
-    data: {
-      repositoryId: repository.id,
-      prNumber: payload.prNumber,
-      prTitle: payload.prTitle,
-      prUrl: payload.prUrl,
-      review: payload.review,
-      status: payload.status || "completed",
-      inputTokens: payload.inputTokens,
-      outputTokens: payload.outputTokens,
-      estimatedCost: payload.estimatedCost,
-    },
-  });
+  const existing = payload.reviewId
+    ? await prisma.review.findUnique({ where: { id: payload.reviewId } })
+    : await prisma.review.findFirst({
+        where: {
+          repositoryId: repository.id,
+          prNumber: payload.prNumber,
+          status: "pending",
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+  const review = existing
+    ? await prisma.review.update({
+        where: { id: existing.id },
+        data: {
+          prTitle: payload.prTitle || existing.prTitle,
+          prUrl: payload.prUrl || existing.prUrl,
+          review: payload.review,
+          status: payload.status || "completed",
+          inputTokens: payload.inputTokens,
+          outputTokens: payload.outputTokens,
+          estimatedCost: payload.estimatedCost,
+        },
+      })
+    : await prisma.review.create({
+        data: {
+          repositoryId: repository.id,
+          prNumber: payload.prNumber,
+          prTitle: payload.prTitle,
+          prUrl: payload.prUrl,
+          review: payload.review,
+          status: payload.status || "completed",
+          inputTokens: payload.inputTokens,
+          outputTokens: payload.outputTokens,
+          estimatedCost: payload.estimatedCost,
+        },
+      });
 
   return NextResponse.json({ ok: true, reviewId: review.id });
 }
