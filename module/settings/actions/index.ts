@@ -26,6 +26,7 @@ export async function getUserProfile() {
         email: true,
         image: true,
         createdAt: true,
+        reviewLanguage: true,
       }
     })
 
@@ -37,7 +38,7 @@ export async function getUserProfile() {
   }
 }
 
-export async function updateUserProfile(data: { name?: string; email?: string }) {
+export async function updateUserProfile(data: { name?: string; email?: string; reviewLanguage?: string }) {
   try {
     const session = await auth.api.getSession({
       headers: await headers()
@@ -54,6 +55,7 @@ export async function updateUserProfile(data: { name?: string; email?: string })
       data: {
         name: data.name,
         email: data.email,
+        reviewLanguage: data.reviewLanguage,
       },
       select: {
         id: true,

@@ -38,6 +38,7 @@ model User {
   subscriptionStatus String?    // ACTIVE, CANCELED, EXPIRED
   polarCustomerId String?  @unique     // For Stripe integration
   polarSubscriptionId String?  @unique    // For Stripe integration
+  reviewLanguage String @default("en")
   @@unique([email])
   @@map("user")
 }

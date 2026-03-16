@@ -7,7 +7,7 @@ export const generateReview = inngest.createFunction(
   {event:"pr.review.requested"},
 
   async ({event , step})=>{
-    const {owner , repo , prNumber , userId} = event.data;
+    const {owner , repo , prNumber , userId , reviewId , subscriptionTier , reviewLanguage , maxPrTokens} = event.data;
 
     const token = await step.run("resolve-token", async()=>{
       const account = await prisma.account.findFirst({
@@ -31,6 +31,10 @@ export const generateReview = inngest.createFunction(
         repo,
         prNumber,
         userId,
+        reviewId,
+        subscriptionTier,
+        reviewLanguage,
+        maxPrTokens,
         token,
       });
     });

@@ -4,6 +4,7 @@ import { inngest } from "@/inngest/client";
 import prisma from "@/lib/db";
 import { getPullRequestDiff } from "@/module/github/lib/github";
 import { canCreateReview, incrementReviewCount } from "@/module/payment/lib/subscription";
+import { getMaxTokensPerPr } from "@/module/payment/lib/limits";
 
 export async function reviewPullRequest(
   owner:string,
@@ -21,7 +22,11 @@ export async function reviewPullRequest(
       },
       include:{
         user:{
-          include:{
+          select:{
+            id: true,
+            name: true,
+            subscriptionTier: true,
+            reviewLanguage: true,
             accounts:{
               where:{
                 providerId:"github"
@@ -60,6 +65,19 @@ export async function reviewPullRequest(
 
     console.log(`PR title fetched: ${title}`);
 
+    const pendingReview = await prisma.review.create({
+      data:{
+        repositoryId: repository.id,
+        prNumber,
+        prTitle: title || "Review in progress",
+        prUrl: `https://github.com/${owner}/${repo}/pull/${prNumber}`,
+        review: "Review in progress.",
+        status: "pending"
+      }
+    });
+
+    const maxPrTokens = getMaxTokensPerPr(repository.user.subscriptionTier as "FREE" | "PRO");
+
     await inngest.send({
       name:"pr.review.requested",
       data:{
@@ -67,6 +85,10 @@ export async function reviewPullRequest(
         repo,
         prNumber,
         userId: repository.user.id,
+        reviewId: pendingReview.id,
+        subscriptionTier: repository.user.subscriptionTier,
+        reviewLanguage: repository.user.reviewLanguage,
+        maxPrTokens,
       }
     });
 
@@ -86,16 +108,39 @@ export async function reviewPullRequest(
       })
       
       if(repository){
-        await prisma.review.create({
-          data:{
-            repositoryId:repository.id,
+        const existing = await prisma.review.findFirst({
+          where:{
+            repositoryId: repository.id,
             prNumber,
-            prTitle:"Failed to fetch PR",
-            prUrl:`https://github.com/${owner}/${repo}/pull/${prNumber}`,
-            review:`Error: ${error instanceof Error ? error.message : "Unknown Error"}`,
-            status:"failed"
+            status: "pending"
+          },
+          orderBy:{
+            createdAt: "desc"
           }
-        })
+        });
+
+        if (existing) {
+          await prisma.review.update({
+            where: { id: existing.id },
+            data: {
+              prTitle: existing.prTitle || "Failed to fetch PR",
+              prUrl: existing.prUrl || `https://github.com/${owner}/${repo}/pull/${prNumber}`,
+              review: `Error: ${error instanceof Error ? error.message : "Unknown Error"}`,
+              status: "failed",
+            }
+          });
+        } else {
+          await prisma.review.create({
+            data:{
+              repositoryId:repository.id,
+              prNumber,
+              prTitle:"Failed to fetch PR",
+              prUrl:`https://github.com/${owner}/${repo}/pull/${prNumber}`,
+              review:`Error: ${error instanceof Error ? error.message : "Unknown Error"}`,
+              status:"failed"
+            }
+          })
+        }
       }
     } catch (dbError) {
       console.error("Failed to create failed review in database:", dbError);

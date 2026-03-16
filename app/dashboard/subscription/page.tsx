@@ -13,6 +13,7 @@ import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getSubscriptionData, syncSubscriptionStatus } from "@/module/payment/action"
+import { FREE_MAX_TOKENS_PER_PR } from "@/module/payment/lib/limits"
 
 const PLAN_FEATURES = {
   free: [
@@ -22,10 +23,12 @@ const PLAN_FEATURES = {
     { name: "Community support", included: true },
     { name: "Advanced analytics", included: false },
     { name: "Priority support", included: false },
+    { name: `Max ${FREE_MAX_TOKENS_PER_PR.toLocaleString()} tokens per PR`, included: true },
   ],
   pro: [
     { name: "Unlimited repositories", included: true },
     { name: "Unlimited reviews", included: true },
+    { name: "No per-PR token limit", included: true },
     { name: "Advanced code reviews", included: true },
     { name: "Email support", included: true },
     { name: "Advanced analytics", included: true },
@@ -224,6 +227,21 @@ export default function SubscriptionPage() {
                   {isPro
                     ? "No limits on reviews"
                     : "Free tier allows 5 reviews per repository"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Max tokens per PR</span>
+                  <Badge variant={isPro ? "outline" : "secondary"}>
+                    {isPro ? "Unlimited" : FREE_MAX_TOKENS_PER_PR.toLocaleString()}
+                  </Badge>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  {isPro
+                    ? "No per-PR token cap"
+                    : "Free tier limits tokens per pull request"}
                 </p>
               </div>
             </div>

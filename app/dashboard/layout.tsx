@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from '@/components/ui/separator'
 import { requireAuth } from '@/module/auth/utils/auth-utils'
+import { Spinner } from "@/components/ui/spinner";
 
-const DashboardLayout = async (
+const AuthenticatedLayout = async (
   {children}: { children: React.ReactNode}
 ) => {
   await requireAuth();
@@ -22,6 +23,20 @@ const DashboardLayout = async (
         </main>
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Spinner className="size-6" />
+        </div>
+      }
+    >
+      <AuthenticatedLayout>{children}</AuthenticatedLayout>
+    </Suspense>
   )
 }
 

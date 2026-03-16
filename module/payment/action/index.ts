@@ -80,7 +80,40 @@ export async function syncSubscriptionStatus() {
   });
 
   if (!user || !user.polarCustomerId) {
-    return { success: false, message: "No Polar customer ID found" };
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+
+    try {
+      const iterator = await polarClient.customers.list({
+        email: user.email,
+        limit: 1,
+      });
+
+      let resolvedCustomerId: string | null = null;
+      for await (const page of iterator) {
+        const customer = page.result?.items?.[0];
+        if (customer?.id) {
+          resolvedCustomerId = customer.id;
+        }
+        break;
+      }
+
+      if (resolvedCustomerId) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { polarCustomerId: resolvedCustomerId },
+        });
+
+        user.polarCustomerId = resolvedCustomerId;
+      }
+    } catch (error) {
+      console.error("Failed to resolve Polar customer by email:", error);
+    }
+
+    if (!user.polarCustomerId) {
+      return { success: false, message: "No Polar customer ID found" };
+    }
   }
 
   try {
