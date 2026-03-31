@@ -39,6 +39,7 @@ model User {
   polarCustomerId String?  @unique     // For Stripe integration
   polarSubscriptionId String?  @unique    // For Stripe integration
   reviewLanguage String @default("en")
+  reviewSections Json @default("[]")
   @@unique([email])
   @@map("user")
 }
@@ -53,6 +54,9 @@ model Repository {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   reviews   Review[]
+  indexStatus String @default("ready") // ready, indexing, failed, warning
+  indexMessage String?
+  indexedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -72,11 +76,27 @@ model Review {
   outputTokens Int?
   estimatedCost Float?
   status       String     @default("completed") // completed, failed, pending
+  startedAt    DateTime?
+  completedAt  DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  events       ReviewEvent[]
 
   @@index([repositoryId])
   @@map("review")
+}
+
+model ReviewEvent {
+  id        String  @id @default(cuid())
+  reviewId  String
+  review    Review  @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  level     String  @default("info") // info, warn, error
+  message   String
+  meta      Json    @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([reviewId])
+  @@map("review_event")
 }
 
 model UserUsage {

@@ -3,8 +3,20 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { use } from "react";
 import { deleteWebhook } from "@/module/github/lib/github";
+
+const REVIEW_SECTION_KEYS = new Set([
+  "walkthrough",
+  "sequence_diagram",
+  "summary",
+  "strengths",
+  "issues",
+  "suggestions",
+  "tests",
+  "references",
+  "risk_score",
+  "poem",
+]);
 
 export async function getUserProfile() {
   try {
@@ -27,6 +39,7 @@ export async function getUserProfile() {
         image: true,
         createdAt: true,
         reviewLanguage: true,
+        reviewSections: true,
       }
     })
 
@@ -38,7 +51,12 @@ export async function getUserProfile() {
   }
 }
 
-export async function updateUserProfile(data: { name?: string; email?: string; reviewLanguage?: string }) {
+export async function updateUserProfile(data: {
+  name?: string;
+  email?: string;
+  reviewLanguage?: string;
+  reviewSections?: string[];
+}) {
   try {
     const session = await auth.api.getSession({
       headers: await headers()
@@ -48,6 +66,10 @@ export async function updateUserProfile(data: { name?: string; email?: string; r
       throw new Error("Unauthorized")
     }
 
+    const filteredSections = data.reviewSections
+      ? data.reviewSections.filter((section) => REVIEW_SECTION_KEYS.has(section))
+      : undefined;
+
     const updateUser = await prisma.user.update({
       where: {
         id: session.user.id
@@ -56,11 +78,13 @@ export async function updateUserProfile(data: { name?: string; email?: string; r
         name: data.name,
         email: data.email,
         reviewLanguage: data.reviewLanguage,
+        reviewSections: filteredSections,
       },
       select: {
         id: true,
         name: true,
         email: true,
+        reviewSections: true,
       }
     });
 
@@ -99,6 +123,9 @@ export async function getConnectedRepositories() {
         fullName: true,
         url: true,
         createdAt: true,
+        indexStatus: true,
+        indexMessage: true,
+        indexedAt: true,
       },
       orderBy: {
         createdAt: "desc"

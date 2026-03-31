@@ -53,6 +53,14 @@ async def index_repository(payload: dict[str, Any]) -> dict[str, Any]:
     branch = get_default_branch(token, owner, repo)
     tree = get_repo_tree(token, owner, repo, branch)
 
+    if not tree:
+        return {
+            "repo": repo_id,
+            "filesIndexed": 0,
+            "records": 0,
+            "warning": "Repository is empty or tree is unavailable",
+        }
+
     files_indexed = 0
     records: list[dict] = []
     pinecone_client = PineconeClient()

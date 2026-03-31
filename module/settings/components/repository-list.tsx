@@ -32,6 +32,28 @@ export function RepositoryList() {
     refetchOnWindowFocus: false,
   })
 
+  const getStatusBadge = (status?: string, message?: string | null) => {
+    if (!status) return null
+
+    if (status === "indexing") {
+      return <Badge variant="outline">Indexing</Badge>
+    }
+
+    if (status === "failed") {
+      return <Badge variant="destructive">Index Failed</Badge>
+    }
+
+    if (status === "warning") {
+      return <Badge variant="secondary">Connected (warning)</Badge>
+    }
+
+    if (message) {
+      return <Badge variant="secondary">Connected</Badge>
+    }
+
+    return <Badge variant="secondary">Connected</Badge>
+  }
+
   const disconnectMutation = useMutation({
     mutationFn: async (repositoryId: string) => {
         return await disconnectRepository(repositoryId);
@@ -148,6 +170,7 @@ export function RepositoryList() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold truncate">{repo.fullName}</h3>
+                    {getStatusBadge(repo.indexStatus, repo.indexMessage)}
                     <a
                       href={repo.url}
                       target="_blank"
@@ -157,6 +180,11 @@ export function RepositoryList() {
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   </div>
+                  {repo.indexMessage && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {repo.indexMessage}
+                    </p>
+                  )}
 
                 </div>
 

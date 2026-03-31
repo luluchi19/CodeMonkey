@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     pinecone_index: str = "codemonkey-vector-embeddings-v2"
     embedding_model: str = "text-embedding-004"
     embedding_dimension: int = 768
-    genai_model: str = "models/gemini-2.0-flash"
+    genai_model: str = "models/gemini-2.5-flash"
     max_context_chunks: int = 6
     diff_max_chars: int = 20000
     max_file_bytes: int = 256000

@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from '@/components/ui/separator'
 import { requireAuth } from '@/module/auth/utils/auth-utils'
 import { Spinner } from "@/components/ui/spinner";
+import { ReviewNotifier } from "@/module/review/components/review-notifier";
 
 const AuthenticatedLayout = async (
   {children}: { children: React.ReactNode}
@@ -11,6 +12,7 @@ const AuthenticatedLayout = async (
   await requireAuth();
   return (
     <SidebarProvider>
+      <ReviewNotifier />
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">

@@ -1,6 +1,5 @@
 "use client"
 import { signIn } from "@/lib/auth-client"
-import { se } from "date-fns/locale"
 import { GithubIcon } from "lucide-react"
 import { useState } from "react"
 
@@ -20,61 +19,50 @@ const LoginUI = () => {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-black via-black to-zinc-900 text-white dark flex">
-      <div className="flex-1 flex flex-col justify-center px-12 py-16">
-        <div className="max-w-lg">
-          <div className="mb-16">
-            <div className="inline-flex items-center gap-2 text-2xl font-bold">
-              <div className="w-8 h-8 bg-primary rounded-full" />
-              <span>CodeMonkey</span>
-            </div>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-amber-50 via-background to-orange-100 text-foreground flex">
+      <div className="flex-1 hidden lg:flex flex-col justify-center px-16 py-20">
+        <div className="max-w-xl space-y-8">
+          <div className="inline-flex items-center gap-3 text-2xl font-bold">
+            <div className="w-10 h-10 bg-primary rounded-2xl" />
+            <span>CodeMonkey</span>
           </div>
-          <h1 className="text-5xl font-bold mb-6 leading-tight text-balance">
-            Cut Code Review Time & Bugs in Half. <span className="block">Instantly.</span>
-          </h1>
-
-          <p className="text-lg text-gray-400 leading-relaxed">
-            Supercharge your team to ship faster with the most advanced AI code reviews.
-          </p>
-
+          <div className="space-y-4">
+            <h1 className="text-5xl font-bold leading-tight text-balance">
+              Ship reviews faster with a focused AI copilot.
+            </h1>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              Connect GitHub once and receive structured, actionable PR feedback in minutes.
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/70 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900">
+            Github-first authentication
+          </div>
         </div>
       </div>
-      <div className="flex-1 flex flex-col justify-center items-center px-12 py-16">
-        <div className="w-full max-w-sm">
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
-            <p className="text-gray-400">Login using the following providers:</p>
+
+      <div className="flex-1 flex flex-col justify-center items-center px-6 py-16">
+        <div className="w-full max-w-sm rounded-2xl border border-border/60 bg-card/80 p-8 shadow-lg backdrop-blur">
+          <div className="mb-10 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Secure Sign In
+            </p>
+            <h2 className="text-3xl font-bold">Continue with GitHub</h2>
+            <p className="text-sm text-muted-foreground">
+              We only support GitHub login to connect your repositories.
+            </p>
           </div>
+
           <button
             onClick={handleGithubLogin}
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-primary text-black rounded-lg font-semibold hover:bg-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3 mb-8"
+            className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3"
           >
             <GithubIcon size={20} />
-            {isLoading ? "Signing in..." : "Github"}
+            {isLoading ? "Signing in..." : "Sign in with GitHub"}
           </button>
 
-          <div className="space-y-4 text-center text-sm text-gray-400">
-            <div>
-              New to CodeMonkey?{" "}
-              <a href="#" className="text-primary hover:text-primary-foreground font-semibold">
-                Sign Up
-              </a>
-            </div>
-            <div>
-              <a href="#" className="text-primary hover:text-primary-foreground font-semibold">
-                Self-Hosted Services
-              </a>
-            </div>
-          </div>
-          <div className="mt-12 pt-8 border-t border-gray-700 flex justify-center gap-4 text-xs text-gray-500">
-            <a href="#" className="hover:text-gray-400">
-              Terms of Use
-            </a>
-            <span>and</span>
-            <a href="#" className="hover:text-gray-400">
-              Privacy Policy
-            </a>
+          <div className="mt-8 pt-6 border-t border-border/60 text-center text-xs text-muted-foreground">
+            By continuing, you agree to our Terms of Use and Privacy Policy.
           </div>
         </div>
       </div>

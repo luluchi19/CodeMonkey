@@ -28,14 +28,21 @@ export const fetchRepositories = async (
     },
   });
 
-  const connectedRepoIds = new Set(
-    dbRepos.map((repo) => repo.githubId)
+  const connectedRepoMap = new Map(
+    dbRepos.map((repo) => [repo.githubId.toString(), repo])
   );
 
-  return githubRepos.map((repo: any) => ({
-    ...repo,
-    isConnected: connectedRepoIds.has(BigInt(repo.id)),
-  }));
+  return githubRepos.map((repo: any) => {
+    const connectedRepo = connectedRepoMap.get(repo.id.toString());
+
+    return {
+      ...repo,
+      isConnected: Boolean(connectedRepo),
+      indexStatus: connectedRepo?.indexStatus || "disconnected",
+      indexMessage: connectedRepo?.indexMessage || null,
+      indexedAt: connectedRepo?.indexedAt || null,
+    };
+  });
 
 };
 
@@ -75,7 +82,9 @@ export const connectRepository = async (owner: string, repo: string, githubId: n
         owner,
         fullName:`${owner}/${repo}`,
         url:`https://github.com/${owner}/${repo}`,
-        userId:session.user.id
+        userId:session.user.id,
+        indexStatus: "indexing",
+        indexMessage: "Indexing queued",
       }
     })
 
