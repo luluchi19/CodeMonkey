@@ -26,6 +26,9 @@ interface Repository {
   language: string | null;
   topics: string[];
   isConnected?: boolean;
+  indexStatus?: string;
+  indexMessage?: string | null;
+  indexedAt?: string | null;
 }
 
 const RepositoryPage = () => {
@@ -118,6 +121,50 @@ const RepositoryPage = () => {
     )
   }
 
+  const getStatusBadge = (repo: Repository) => {
+    if (!repo.isConnected) return null;
+
+    const status = repo.indexStatus || "ready";
+
+    if (status === "indexing") {
+      return <Badge variant="outline">Indexing</Badge>;
+    }
+
+    if (status === "failed") {
+      return <Badge variant="destructive">Index Failed</Badge>;
+    }
+
+    if (status === "warning") {
+      return <Badge variant="secondary">Connected (warning)</Badge>;
+    }
+
+    return <Badge variant="secondary">Connected</Badge>;
+  };
+
+  const getConnectLabel = (repo: Repository) => {
+    if (localConnectingId === repo.id) {
+      return "Connecting...";
+    }
+
+    if (!repo.isConnected) {
+      return "Connect";
+    }
+
+    if (repo.indexStatus === "indexing") {
+      return "Indexing...";
+    }
+
+    if (repo.indexStatus === "failed") {
+      return "Index Failed";
+    }
+
+    if (repo.indexStatus === "warning") {
+      return "Connected (warning)";
+    }
+
+    return "Connected";
+  };
+
 
   return (
     <div className="space-y-4">
@@ -154,11 +201,7 @@ const RepositoryPage = () => {
                       <Badge variant="outline">
                         {repo.language || "Unknown"}
                       </Badge>
-                      {repo.isConnected && (
-                        <Badge variant="secondary">
-                          Connected
-                        </Badge>
-                      )}
+                      {getStatusBadge(repo)}
                     </div>
                     <CardDescription>
                       {repo.description}
@@ -186,11 +229,7 @@ const RepositoryPage = () => {
                         repo.isConnected ? "outline" : "default"
                       }
                     >
-                      {localConnectingId === repo.id
-                        ? "Connecting..."
-                        : repo.isConnected
-                        ? "Connected"
-                        : "Connect"}
+                      {getConnectLabel(repo)}
                     </Button>
                   </div>
                 </div>
@@ -206,6 +245,11 @@ const RepositoryPage = () => {
                       </span>
                     </div>
                   </div>
+                  {repo.isConnected && repo.indexMessage && (
+                    <p className="text-xs text-muted-foreground">
+                      {repo.indexMessage}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

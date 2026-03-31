@@ -31,6 +31,13 @@ def get_repo_tree(token: str, owner: str, repo: str, branch: str) -> list[dict]:
         params={"recursive": "1"},
         timeout=60,
     )
+    if resp.status_code == 409:
+        return []
+    if resp.status_code in (403, 404):
+        raise ValueError(
+            "Repository tree is not доступible. Ensure the GitHub token has repo access "
+            "and the user has permission to the private repository."
+        )
     resp.raise_for_status()
     return resp.json().get("tree", [])
 

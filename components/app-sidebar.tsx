@@ -58,6 +58,11 @@ export const AppSidebar = () => {
       icon: BookOpen,
     },
     {
+      title: "Guide",
+      url: "/dashboard/guide",
+      icon: Book,
+    },
+    {
       title: "Settings",
       url: "/dashboard/settings",
       icon: Settings,

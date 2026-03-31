@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 import requests
 
 from app.config import settings
@@ -24,22 +26,40 @@ def generate_text(prompt: str) -> str:
         ]
     }
 
-    resp = requests.post(
-        url,
-        params={"key": settings.google_api_key},
-        json=payload,
-        timeout=60,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    candidates = data.get("candidates") or []
-    if not candidates:
-        return ""
+    for attempt in range(1, 4):
+        try:
+            # External API: use retries to handle transient Gemini errors.
+            resp = requests.post(
+                url,
+                params={"key": settings.google_api_key},
+                json=payload,
+                timeout=75,
+            )
 
-    content = candidates[0].get("content") or {}
-    parts = content.get("parts") or []
-    if not parts:
-        return ""
+            if resp.status_code in (429, 500, 502, 503, 504):
+                raise requests.HTTPError(
+                    f"Gemini transient error {resp.status_code}: {resp.text}",
+                    response=resp,
+                )
 
-    text = parts[0].get("text")
-    return text or ""
+            resp.raise_for_status()
+            data = resp.json()
+            candidates = data.get("candidates") or []
+            if not candidates:
+                return ""
+
+            content = candidates[0].get("content") or {}
+            parts = content.get("parts") or []
+            if not parts:
+                return ""
+
+            text = parts[0].get("text")
+            return text or ""
+        except requests.RequestException as exc:
+            if attempt >= 3:
+                raise
+            wait_seconds = 2 ** (attempt - 1)
+            print("gemini_request_retry", {"attempt": attempt, "error": str(exc)})
+            time.sleep(wait_seconds)
+
+    return ""

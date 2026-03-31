@@ -3,6 +3,7 @@
 import { ProfileForm } from '@/module/settings/components/profile-form';
 import { RepositoryList } from '@/module/settings/components/repository-list';
 import { ReviewLanguageForm } from '@/module/settings/components/review-language-form';
+import { ReviewSectionsForm } from '@/module/settings/components/review-sections-form';
 import React from 'react'
 
 const SettingPage = () => {
@@ -14,6 +15,7 @@ const SettingPage = () => {
       </div>
       <ProfileForm />
       <ReviewLanguageForm />
+      <ReviewSectionsForm />
       <RepositoryList />
     </div>
   )

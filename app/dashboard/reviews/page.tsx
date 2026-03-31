@@ -7,9 +7,14 @@ import { ExternalLink, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-reac
 import { useQuery } from "@tanstack/react-query"
 import { getReviews } from "@/module/review/actions"
 import { formatDistanceToNow } from "date-fns"
-import { useEffect, useRef } from "react"
-import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
+import { useSearchParams } from "next/navigation"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 export default function ReviewsPage(){
   const {data:reviews , isLoading} = useQuery({
@@ -23,53 +28,19 @@ export default function ReviewsPage(){
     }
   });
 
-  const statusMapRef = useRef<Record<string, string>>({})
+  const searchParams = useSearchParams()
+  const focusedReviewId = searchParams.get("reviewId")
 
-  useEffect(() => {
-    if (!reviews) {
-      return
+  const formatDuration = (start?: string, end?: string) => {
+    if (!start) {
+      return null
     }
 
-    const statusMap = statusMapRef.current
-
-    for (const review of reviews) {
-      const previousStatus = statusMap[review.id]
-
-      if (!previousStatus) {
-        if (review.status === "pending") {
-          toast.info("Review started", {
-            description: `${review.repository.fullName} • PR #${review.prNumber}`,
-          })
-        }
-
-        if (review.status === "completed") {
-          toast.success("Review completed", {
-            description: `${review.repository.fullName} • PR #${review.prNumber}`,
-          })
-        }
-
-        if (review.status === "failed") {
-          toast.error("Review failed", {
-            description: review.review?.substring(0, 120) || "Review failed.",
-          })
-        }
-      } else if (previousStatus !== review.status) {
-        if (review.status === "completed") {
-          toast.success("Review completed", {
-            description: `${review.repository.fullName} • PR #${review.prNumber}`,
-          })
-        }
-
-        if (review.status === "failed") {
-          toast.error("Review failed", {
-            description: review.review?.substring(0, 120) || "Review failed.",
-          })
-        }
-      }
-
-      statusMap[review.id] = review.status
-    }
-  }, [reviews])
+    const startMs = new Date(start).getTime()
+    const endMs = end ? new Date(end).getTime() : Date.now()
+    const seconds = Math.max(0, Math.round((endMs - startMs) / 1000))
+    return `${seconds}s`
+  }
   if(isLoading){
     return (
       <div className="flex items-center justify-center min-h-[240px]">
@@ -97,8 +68,18 @@ export default function ReviewsPage(){
           </Card>
         ) : (
           <div className="grid gap-4">
-            {reviews?.map((review: any) => (
-              <Card key={review.id} className="hover:shadow-md transition-shadow">
+            {reviews?.map((review: any) => {
+              const duration = formatDuration(review.startedAt, review.completedAt)
+              const latestEvent = review.events?.[review.events.length - 1]
+              const etaMs = latestEvent?.meta?.etaMs
+
+              return (
+              <Card
+                key={review.id}
+                className={`hover:shadow-md transition-shadow ${
+                  focusedReviewId === review.id ? "ring-2 ring-primary" : ""
+                }`}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="space-y-2 flex-1">
@@ -146,6 +127,19 @@ export default function ReviewsPage(){
                       {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true })}
                     </div>
 
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {duration && (
+                        <span className="rounded-full border px-2 py-1">
+                          {review.completedAt ? "Duration" : "Elapsed"}: {duration}
+                        </span>
+                      )}
+                      {typeof etaMs === "number" && etaMs > 0 && review.status === "pending" && (
+                        <span className="rounded-full border px-2 py-1">
+                          ETA: {Math.max(1, Math.round(etaMs / 1000))}s
+                        </span>
+                      )}
+                    </div>
+
                     <div className="prose prose-sm dark:prose-invert max-w-none">
                       <div className="bg-muted p-4 rounded-lg">
                         <pre className="whitespace-pre-wrap text-xs">
@@ -153,6 +147,43 @@ export default function ReviewsPage(){
                         </pre>
                       </div>
                     </div>
+
+                    <Accordion type="single" collapsible>
+                      <AccordionItem value="trace">
+                        <AccordionTrigger>Review Timeline</AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-2 text-xs">
+                            {review.events?.length ? (
+                              review.events.map((event: any) => (
+                                <div
+                                  key={event.id}
+                                  className="flex flex-wrap items-center gap-2 rounded border px-3 py-2"
+                                >
+                                  <span className="text-muted-foreground">
+                                    {new Date(event.createdAt).toLocaleTimeString()}
+                                  </span>
+                                  <span className="font-medium text-foreground">
+                                    {event.message}
+                                  </span>
+                                  {event.meta?.elapsedMs !== undefined && (
+                                    <span className="text-muted-foreground">
+                                      {Math.max(1, Math.round(event.meta.elapsedMs / 1000))}s elapsed
+                                    </span>
+                                  )}
+                                  {event.meta?.etaMs !== undefined && event.meta.etaMs > 0 && (
+                                    <span className="text-muted-foreground">
+                                      ETA {Math.max(1, Math.round(event.meta.etaMs / 1000))}s
+                                    </span>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-muted-foreground">No timeline events yet.</div>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
 
                     <Button variant="outline" asChild>
                       <a href={review.prUrl} target="_blank" rel="noopener noreferrer">
@@ -162,7 +193,7 @@ export default function ReviewsPage(){
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         )
       }

@@ -27,6 +27,7 @@ export async function reviewPullRequest(
             name: true,
             subscriptionTier: true,
             reviewLanguage: true,
+            reviewSections: true,
             accounts:{
               where:{
                 providerId:"github"
@@ -72,8 +73,22 @@ export async function reviewPullRequest(
         prTitle: title || "Review in progress",
         prUrl: `https://github.com/${owner}/${repo}/pull/${prNumber}`,
         review: "Review in progress.",
-        status: "pending"
+        status: "pending",
+        startedAt: new Date()
       }
+    });
+
+    await prisma.reviewEvent.create({
+      data: {
+        reviewId: pendingReview.id,
+        level: "info",
+        message: "Review requested",
+        meta: {
+          owner,
+          repo,
+          prNumber,
+        },
+      },
     });
 
     const maxPrTokens = getMaxTokensPerPr(repository.user.subscriptionTier as "FREE" | "PRO");
@@ -88,6 +103,7 @@ export async function reviewPullRequest(
         reviewId: pendingReview.id,
         subscriptionTier: repository.user.subscriptionTier,
         reviewLanguage: repository.user.reviewLanguage,
+        reviewSections: repository.user.reviewSections || [],
         maxPrTokens,
       }
     });
@@ -127,7 +143,19 @@ export async function reviewPullRequest(
               prUrl: existing.prUrl || `https://github.com/${owner}/${repo}/pull/${prNumber}`,
               review: `Error: ${error instanceof Error ? error.message : "Unknown Error"}`,
               status: "failed",
+              completedAt: new Date(),
             }
+          });
+
+          await prisma.reviewEvent.create({
+            data: {
+              reviewId: existing.id,
+              level: "error",
+              message: "Review failed before dispatch",
+              meta: {
+                error: error instanceof Error ? error.message : "Unknown Error",
+              },
+            },
           });
         } else {
           await prisma.review.create({
@@ -137,7 +165,8 @@ export async function reviewPullRequest(
               prTitle:"Failed to fetch PR",
               prUrl:`https://github.com/${owner}/${repo}/pull/${prNumber}`,
               review:`Error: ${error instanceof Error ? error.message : "Unknown Error"}`,
-              status:"failed"
+              status:"failed",
+              completedAt: new Date(),
             }
           })
         }

@@ -62,6 +62,9 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "desc" },
       });
 
+  const status = payload.status || "completed";
+  const isFinalStatus = status === "completed" || status === "failed";
+
   const review = existing
     ? await prisma.review.update({
         where: { id: existing.id },
@@ -69,10 +72,11 @@ export async function POST(request: NextRequest) {
           prTitle: payload.prTitle || existing.prTitle,
           prUrl: payload.prUrl || existing.prUrl,
           review: payload.review,
-          status: payload.status || "completed",
+          status,
           inputTokens: payload.inputTokens,
           outputTokens: payload.outputTokens,
           estimatedCost: payload.estimatedCost,
+          completedAt: isFinalStatus ? new Date() : existing.completedAt,
         },
       })
     : await prisma.review.create({
@@ -82,10 +86,11 @@ export async function POST(request: NextRequest) {
           prTitle: payload.prTitle,
           prUrl: payload.prUrl,
           review: payload.review,
-          status: payload.status || "completed",
+          status,
           inputTokens: payload.inputTokens,
           outputTokens: payload.outputTokens,
           estimatedCost: payload.estimatedCost,
+          completedAt: isFinalStatus ? new Date() : null,
         },
       });
 

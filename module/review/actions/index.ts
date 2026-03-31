@@ -20,7 +20,10 @@ export async function getReviews() {
       }
     },
     include:{
-      repository:true
+      repository:true,
+      events: {
+        orderBy: { createdAt: "asc" }
+      }
     },
     orderBy:{
       createdAt:"desc"
