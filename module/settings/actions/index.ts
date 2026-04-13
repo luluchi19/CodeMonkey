@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { deleteWebhook } from "@/module/github/lib/github";
+import { decrementRepositoryCount } from "@/module/payment/lib/subscription";
 
 const REVIEW_SECTION_KEYS = new Set([
   "walkthrough",
@@ -40,6 +41,8 @@ export async function getUserProfile() {
         createdAt: true,
         reviewLanguage: true,
         reviewSections: true,
+        reviewAuditEnabled: true,
+        subscriptionTier: true,
       }
     })
 
@@ -56,6 +59,7 @@ export async function updateUserProfile(data: {
   email?: string;
   reviewLanguage?: string;
   reviewSections?: string[];
+  reviewAuditEnabled?: boolean;
 }) {
   try {
     const session = await auth.api.getSession({
@@ -70,6 +74,11 @@ export async function updateUserProfile(data: {
       ? data.reviewSections.filter((section) => REVIEW_SECTION_KEYS.has(section))
       : undefined;
 
+    const reviewAuditEnabled =
+      typeof data.reviewAuditEnabled === "boolean"
+        ? data.reviewAuditEnabled
+        : undefined;
+
     const updateUser = await prisma.user.update({
       where: {
         id: session.user.id
@@ -79,12 +88,14 @@ export async function updateUserProfile(data: {
         email: data.email,
         reviewLanguage: data.reviewLanguage,
         reviewSections: filteredSections,
+        reviewAuditEnabled,
       },
       select: {
         id: true,
         name: true,
         email: true,
         reviewSections: true,
+        reviewAuditEnabled: true,
       }
     });
 
@@ -115,7 +126,8 @@ export async function getConnectedRepositories() {
 
     const repositories = await prisma.repository.findMany({
       where: {
-        userId: session.user.id
+        userId: session.user.id,
+        disconnectedAt: null,
       },
       select: {
         id: true,
@@ -162,12 +174,17 @@ export async function disconnectRepository(repositoryId: string) {
 
     await deleteWebhook(repository.owner, repository.name)
 
-    await prisma.repository.delete({
+    await prisma.repository.update({
       where: {
         id: repositoryId,
         userId: session.user.id
-      }
+      },
+      data: {
+        disconnectedAt: new Date(),
+      },
     });
+
+    await decrementRepositoryCount(session.user.id, 1);
 
     revalidatePath("/dashboard/settings", "page")
     revalidatePath("/dashboard/repository", "page")
@@ -192,6 +209,7 @@ export async function disconnectAllRepositories() {
     const repositories = await prisma.repository.findMany({
       where: {
         userId: session.user.id,
+        disconnectedAt: null,
       },
     })
 
@@ -199,12 +217,19 @@ export async function disconnectAllRepositories() {
       await deleteWebhook(repo.owner, repo.name)
     }));
 
-    // Delete all repositories
-    const result = await prisma.repository.deleteMany({
+    const result = await prisma.repository.updateMany({
       where: {
         userId: session.user.id,
+        disconnectedAt: null,
+      },
+      data: {
+        disconnectedAt: new Date(),
       },
     })
+
+    if (result.count > 0) {
+      await decrementRepositoryCount(session.user.id, result.count);
+    }
 
     revalidatePath("/dashboard/settings")
     revalidatePath("/dashboard/repository")

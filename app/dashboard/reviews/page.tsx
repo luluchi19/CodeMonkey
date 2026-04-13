@@ -9,6 +9,7 @@ import { getReviews } from "@/module/review/actions"
 import { formatDistanceToNow } from "date-fns"
 import { Spinner } from "@/components/ui/spinner"
 import { useSearchParams } from "next/navigation"
+import Link from "next/link"
 import {
   Accordion,
   AccordionContent,
@@ -185,11 +186,18 @@ export default function ReviewsPage(){
                       </AccordionItem>
                     </Accordion>
 
-                    <Button variant="outline" asChild>
-                      <a href={review.prUrl} target="_blank" rel="noopener noreferrer">
-                        View Full Review on GitHub
-                      </a>
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" asChild>
+                        <Link href={`/dashboard/reviews/${review.id}`}>
+                          View details
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" asChild>
+                        <a href={review.prUrl} target="_blank" rel="noopener noreferrer">
+                          View on GitHub
+                        </a>
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

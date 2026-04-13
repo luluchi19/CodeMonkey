@@ -30,6 +30,16 @@ export interface SubscriptionData {
         canAdd: boolean;
       };
     };
+    monthlyReviews: {
+      current: number;
+      limit: number | null;
+      canAdd: boolean;
+    };
+    monthlyTokens: {
+      current: number;
+      limit: number | null;
+      canAdd: boolean;
+    };
   } | null;
 }
 

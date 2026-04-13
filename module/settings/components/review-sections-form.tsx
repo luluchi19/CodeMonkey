@@ -124,6 +124,17 @@ export function ReviewSectionsForm() {
     );
   }, [selectedSections]);
 
+  const adjustedTotals = useMemo(() => {
+    const multiplier = 2; // align UI estimate with typical output size
+    return {
+      minTokens: Math.round(totals.minTokens * multiplier),
+      maxTokens: Math.round(totals.maxTokens * multiplier),
+    };
+  }, [totals]);
+
+  const selectedCount = selectedSections.length;
+  const totalCount = SECTION_OPTIONS.length;
+
   const updateMutation = useMutation({
     mutationFn: async (reviewSections: string[]) =>
       updateUserProfile({ reviewSections }),
@@ -172,13 +183,19 @@ export function ReviewSectionsForm() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Estimated output tokens
-          </span>
-          <Badge variant="secondary">
-            {totals.minTokens}-{totals.maxTokens} tokens
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>Estimated output tokens</span>
+            <Badge variant="secondary">
+              {adjustedTotals.minTokens}-{adjustedTotals.maxTokens} tokens
+            </Badge>
+            <Badge variant="outline">
+              {selectedCount}/{totalCount} sections
+            </Badge>
+          </div>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Estimate includes a small buffer to reflect typical generation length.
+        </p>
 
         <div className="grid gap-3 md:grid-cols-2">
           {SECTION_OPTIONS.map((section) => {

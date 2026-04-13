@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/db";
+import { PRO_MAX_REVIEWS_PER_MONTH, PRO_MAX_TOKENS_PER_MONTH } from "./limits";
 
 export type SubscriptionTier = "FREE" | "PRO";
 export type SubscriptionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED";
@@ -21,6 +22,18 @@ export interface UserLimits {
       limit: number | null;
       canAdd: boolean;
     };
+  };
+
+  monthlyReviews: {
+    current: number;
+    limit: number | null;
+    canAdd: boolean;
+  };
+
+  monthlyTokens: {
+    current: number;
+    limit: number | null;
+    canAdd: boolean;
   };
 }
 
@@ -62,11 +75,42 @@ async function getUserUsage(userId: string) {
   return usage;
 }
 
+async function getMonthlyUsage(userId: string) {
+  const startOfMonth = new Date();
+  startOfMonth.setUTCDate(1);
+  startOfMonth.setUTCHours(0, 0, 0, 0);
+
+  const usage = await prisma.review.aggregate({
+    where: {
+      repository: {
+        userId,
+      },
+      createdAt: {
+        gte: startOfMonth,
+      },
+    },
+    _count: { _all: true },
+    _sum: { inputTokens: true, outputTokens: true },
+  });
+
+  const inputTokens = usage._sum.inputTokens || 0;
+  const outputTokens = usage._sum.outputTokens || 0;
+
+  return {
+    reviews: usage._count._all || 0,
+    tokens: inputTokens + outputTokens,
+  };
+}
+
 export async function canConnectRepository(userId: string): Promise<boolean> {
   const tier = await getUserTier(userId);
 
   if (tier === "PRO") {
-    return true; // Unlimited for pro users
+    const monthlyUsage = await getMonthlyUsage(userId);
+    const canAddReview = monthlyUsage.reviews < PRO_MAX_REVIEWS_PER_MONTH;
+    const canAddTokens = monthlyUsage.tokens < PRO_MAX_TOKENS_PER_MONTH;
+
+    return canAddReview && canAddTokens;
   }
 
   const usage = await getUserUsage(userId);
@@ -109,13 +153,17 @@ export async function incrementRepositoryCount(userId: string): Promise<void> {
   });
 }
 
-export async function decrementRepositoryCount(userId: string): Promise<void> {
+export async function decrementRepositoryCount(
+  userId: string,
+  amount: number = 1
+): Promise<void> {
   const usage = await getUserUsage(userId);
+  const decrementBy = Math.max(1, amount);
 
   await prisma.userUsage.update({
     where: { userId },
     data: {
-      repositoryCount: Math.max(0, usage.repositoryCount - 1),
+      repositoryCount: Math.max(0, usage.repositoryCount - decrementBy),
     },
   });
 }
@@ -150,6 +198,16 @@ export async function getRemainingLimits(userId: string): Promise<UserLimits> {
       canAdd: tier === "PRO" || usage.repositoryCount < TIER_LIMITS.FREE.repositories,
     },
     reviews: {},
+    monthlyReviews: {
+      current: 0,
+      limit: tier === "PRO" ? PRO_MAX_REVIEWS_PER_MONTH : null,
+      canAdd: tier !== "PRO",
+    },
+    monthlyTokens: {
+      current: 0,
+      limit: tier === "PRO" ? PRO_MAX_TOKENS_PER_MONTH : null,
+      canAdd: tier !== "PRO",
+    },
   };
 
   // Get all user's repositories
@@ -166,6 +224,21 @@ export async function getRemainingLimits(userId: string): Promise<UserLimits> {
       current: currentCount,
       limit: tier === "PRO" ? null : TIER_LIMITS.FREE.reviewsPerRepo,
       canAdd: tier === "PRO" || currentCount < TIER_LIMITS.FREE.reviewsPerRepo,
+    };
+  }
+
+  if (tier === "PRO") {
+    const monthlyUsage = await getMonthlyUsage(userId);
+
+    limits.monthlyReviews = {
+      current: monthlyUsage.reviews,
+      limit: PRO_MAX_REVIEWS_PER_MONTH,
+      canAdd: monthlyUsage.reviews < PRO_MAX_REVIEWS_PER_MONTH,
+    };
+    limits.monthlyTokens = {
+      current: monthlyUsage.tokens,
+      limit: PRO_MAX_TOKENS_PER_MONTH,
+      canAdd: monthlyUsage.tokens < PRO_MAX_TOKENS_PER_MONTH,
     };
   }
 

@@ -32,7 +32,7 @@ export function ReviewNotifier() {
       const isReviewsPage = pathname?.startsWith("/dashboard/reviews");
 
       const openReview = () => {
-        router.push(`/dashboard/reviews?reviewId=${review.id}`);
+        router.push(`/dashboard/reviews/${review.id}`);
       };
 
       if (!previousStatus && review.status === "pending" && !isReviewsPage) {
@@ -57,12 +57,22 @@ export function ReviewNotifier() {
         }
 
         if (review.status === "failed") {
+          const description = review.review?.substring(0, 120) || "Review failed.";
+          const shouldUpgrade =
+            description.toLowerCase().includes("upgrade") ||
+            description.toLowerCase().includes("limit");
+
           toast.error("Review failed", {
-            description: review.review?.substring(0, 120) || "Review failed.",
-            action: {
-              label: "Details",
-              onClick: openReview,
-            },
+            description,
+            action: shouldUpgrade
+              ? {
+                  label: "Upgrade",
+                  onClick: () => router.push("/dashboard/subscription"),
+                }
+              : {
+                  label: "Details",
+                  onClick: openReview,
+                },
           });
         }
       }
