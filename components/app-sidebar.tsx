@@ -1,5 +1,5 @@
 "use client"
-import { Github, BookOpen, Settings, Moon, Sun, LogOut, Book } from "lucide-react"
+import { Github, BookOpen, Settings, Moon, Sun, LogOut, Book, LineChart, Mail } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
@@ -58,9 +58,19 @@ export const AppSidebar = () => {
       icon: BookOpen,
     },
     {
+      title: "Analytics",
+      url: "/dashboard/analytics",
+      icon: LineChart,
+    },
+    {
       title: "Guide",
       url: "/dashboard/guide",
       icon: Book,
+    },
+    {
+      title: "Contact",
+      url: "/dashboard/contact",
+      icon: Mail,
     },
     {
       title: "Settings",

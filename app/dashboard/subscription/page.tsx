@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, X, Loader2, ExternalLink, RefreshCw } from "lucide-react"
+import { Check, X, Loader2, ExternalLink, RefreshCw, HelpCircle } from "lucide-react"
 
 import { checkout , customer } from "@/lib/auth-client"
 import { useSearchParams } from "next/navigation"
@@ -13,7 +13,8 @@ import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import { getSubscriptionData, syncSubscriptionStatus } from "@/module/payment/action"
-import { FREE_MAX_TOKENS_PER_PR } from "@/module/payment/lib/limits"
+import { FREE_MAX_TOKENS_PER_PR, PRO_MAX_REVIEWS_PER_MONTH, PRO_MAX_TOKENS_PER_MONTH } from "@/module/payment/lib/limits"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const PLAN_FEATURES = {
   free: [
@@ -22,16 +23,19 @@ const PLAN_FEATURES = {
     { name: "Basic code reviews", included: true },
     { name: "Community support", included: true },
     { name: "Advanced analytics", included: false },
+    { name: "Review quality audit (PRO)", included: false },
     { name: "Priority support", included: false },
     { name: `Max ${FREE_MAX_TOKENS_PER_PR.toLocaleString()} tokens per PR`, included: true },
   ],
   pro: [
     { name: "Unlimited repositories", included: true },
-    { name: "Unlimited reviews", included: true },
-    { name: "No per-PR token limit", included: true },
+    { name: `${PRO_MAX_REVIEWS_PER_MONTH.toLocaleString()} reviews per month`, included: true },
+    { name: `${PRO_MAX_TOKENS_PER_MONTH.toLocaleString()} tokens per month`, included: true },
+    { name: "No per-PR token cap (monthly budget applies)", included: true },
     { name: "Advanced code reviews", included: true },
     { name: "Email support", included: true },
     { name: "Advanced analytics", included: true },
+    { name: "Review quality audit", included: true },
     { name: "Priority support", included: true },
   ],
 }
@@ -230,9 +234,96 @@ export default function SubscriptionPage() {
                 </p>
               </div>
 
+              {data.limits.monthlyReviews.limit && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Monthly reviews</span>
+                    <Badge variant={data.limits.monthlyReviews.canAdd ? "default" : "destructive"}>
+                      {data.limits.monthlyReviews.current} / {data.limits.monthlyReviews.limit}
+                    </Badge>
+                  </div>
+
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${
+                        data.limits.monthlyReviews.canAdd ? "bg-primary" : "bg-destructive"
+                      }`}
+                      style={{
+                        width: `${Math.min(
+                          (data.limits.monthlyReviews.current /
+                            (data.limits.monthlyReviews.limit || 1)) *
+                            100,
+                          100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {data.limits.monthlyTokens.limit && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium flex items-center gap-2">
+                      Monthly tokens
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground transition"
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent sideOffset={6}>
+                          Token usage is estimated from prompt + context + output with a safety buffer.
+                        </TooltipContent>
+                      </Tooltip>
+                    </span>
+                    <Badge variant={data.limits.monthlyTokens.canAdd ? "default" : "destructive"}>
+                      {data.limits.monthlyTokens.current.toLocaleString()} / {data.limits.monthlyTokens.limit.toLocaleString()}
+                    </Badge>
+                  </div>
+
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${
+                        data.limits.monthlyTokens.canAdd ? "bg-primary" : "bg-destructive"
+                      }`}
+                      style={{
+                        width: `${Math.min(
+                          (data.limits.monthlyTokens.current /
+                            (data.limits.monthlyTokens.limit || 1)) *
+                            100,
+                          100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Tokens include a safety buffer for system overhead and long outputs.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Max tokens per PR</span>
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    Max tokens per PR
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground transition"
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={6}>
+                        Based on diff size, retrieved context, and expected response length.
+                      </TooltipContent>
+                    </Tooltip>
+                  </span>
                   <Badge variant={isPro ? "outline" : "secondary"}>
                     {isPro ? "Unlimited" : FREE_MAX_TOKENS_PER_PR.toLocaleString()}
                   </Badge>
@@ -240,7 +331,7 @@ export default function SubscriptionPage() {
 
                 <p className="text-xs text-muted-foreground">
                   {isPro
-                    ? "No per-PR token cap"
+                    ? "No per-PR token cap (monthly budget applies)"
                     : "Free tier limits tokens per pull request"}
                 </p>
               </div>

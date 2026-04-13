@@ -250,7 +250,89 @@ export async function getPullRequestDiff(
     diff: diff as unknown as string,
     title: pr.title,
     description: pr.body || "",
+    author: pr.user?.login || null,
+    state: pr.state || null,
+    createdAt: pr.created_at || null,
+    mergedAt: pr.merged_at || null,
+    baseRef: pr.base?.ref || null,
+    headRef: pr.head?.ref || null,
+    additions: typeof pr.additions === "number" ? pr.additions : null,
+    deletions: typeof pr.deletions === "number" ? pr.deletions : null,
+    changedFiles: typeof pr.changed_files === "number" ? pr.changed_files : null,
   }
+}
+
+export async function getPullRequestFiles(
+  token: string,
+  owner: string,
+  repo: string,
+  prNumber: number
+): Promise<
+  {
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    changes: number;
+    patch?: string;
+    blob_url: string;
+  }[]
+> {
+  const octokit = new Octokit({ auth: token });
+  const { data } = await octokit.rest.pulls.listFiles({
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  });
+
+  return data.map((file) => ({
+    filename: file.filename,
+    status: file.status,
+    additions: file.additions,
+    deletions: file.deletions,
+    changes: file.changes,
+    patch: file.patch || undefined,
+    blob_url: file.blob_url,
+  }));
+}
+
+export async function getPullRequestDetails(
+  token: string,
+  owner: string,
+  repo: string,
+  prNumber: number
+): Promise<{
+  title: string;
+  author: string | null;
+  state: string | null;
+  createdAt: string | null;
+  mergedAt: string | null;
+  baseRef: string | null;
+  headRef: string | null;
+  additions: number | null;
+  deletions: number | null;
+  changedFiles: number | null;
+}> {
+  const octokit = new Octokit({ auth: token });
+  const { data: pr } = await octokit.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: prNumber,
+  });
+
+  return {
+    title: pr.title,
+    author: pr.user?.login || null,
+    state: pr.state || null,
+    createdAt: pr.created_at || null,
+    mergedAt: pr.merged_at || null,
+    baseRef: pr.base?.ref || null,
+    headRef: pr.head?.ref || null,
+    additions: typeof pr.additions === "number" ? pr.additions : null,
+    deletions: typeof pr.deletions === "number" ? pr.deletions : null,
+    changedFiles: typeof pr.changed_files === "number" ? pr.changed_files : null,
+  };
 }
 
 export async function postReviewComment(

@@ -28,6 +28,7 @@ export async function reviewPullRequest(
             subscriptionTier: true,
             reviewLanguage: true,
             reviewSections: true,
+            reviewAuditEnabled: true,
             accounts:{
               where:{
                 providerId:"github"
@@ -62,7 +63,8 @@ export async function reviewPullRequest(
 
     const token = githubAccount.accessToken;
 
-    const { title } = await getPullRequestDiff(token, owner, repo, prNumber);
+    const prDetails = await getPullRequestDiff(token, owner, repo, prNumber);
+    const title = prDetails.title;
 
     console.log(`PR title fetched: ${title}`);
 
@@ -71,6 +73,15 @@ export async function reviewPullRequest(
         repositoryId: repository.id,
         prNumber,
         prTitle: title || "Review in progress",
+        prAuthor: prDetails.author || null,
+        prState: prDetails.state || null,
+        prCreatedAt: prDetails.createdAt ? new Date(prDetails.createdAt) : null,
+        prMergedAt: prDetails.mergedAt ? new Date(prDetails.mergedAt) : null,
+        baseRef: prDetails.baseRef || null,
+        headRef: prDetails.headRef || null,
+        additions: prDetails.additions ?? null,
+        deletions: prDetails.deletions ?? null,
+        changedFiles: prDetails.changedFiles ?? null,
         prUrl: `https://github.com/${owner}/${repo}/pull/${prNumber}`,
         review: "Review in progress.",
         status: "pending",
@@ -104,6 +115,8 @@ export async function reviewPullRequest(
         subscriptionTier: repository.user.subscriptionTier,
         reviewLanguage: repository.user.reviewLanguage,
         reviewSections: repository.user.reviewSections || [],
+        reviewAuditEnabled: Boolean(repository.user.reviewAuditEnabled),
+        reviewAuditEnabledSource: repository.user.reviewAuditEnabled ? "user" : "none",
         maxPrTokens,
       }
     });

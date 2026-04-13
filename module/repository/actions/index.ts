@@ -34,13 +34,14 @@ export const fetchRepositories = async (
 
   return githubRepos.map((repo: any) => {
     const connectedRepo = connectedRepoMap.get(repo.id.toString());
+    const isConnected = Boolean(connectedRepo && !connectedRepo.disconnectedAt);
 
     return {
       ...repo,
-      isConnected: Boolean(connectedRepo),
-      indexStatus: connectedRepo?.indexStatus || "disconnected",
-      indexMessage: connectedRepo?.indexMessage || null,
-      indexedAt: connectedRepo?.indexedAt || null,
+      isConnected,
+      indexStatus: isConnected ? connectedRepo?.indexStatus || "ready" : "disconnected",
+      indexMessage: isConnected ? connectedRepo?.indexMessage || null : "Disconnected",
+      indexedAt: isConnected ? connectedRepo?.indexedAt || null : null,
     };
   });
 
@@ -72,27 +73,46 @@ export const connectRepository = async (owner: string, repo: string, githubId: n
     throw new Error("Repository connection limit reached. Please upgrade your subscription to PRO to connect more repositories.");
   }
 
+  const existingRepo = await prisma.repository.findFirst({
+    where: {
+      githubId: BigInt(githubId),
+      userId: session.user.id,
+    },
+  });
+
+  if (existingRepo && !existingRepo.disconnectedAt) {
+    return { ok: true, alreadyConnected: true };
+  }
+
   const webhook = await createWebhook(owner , repo)
 
   if(webhook){
-    await prisma.repository.create({
-      data:{
-        githubId:BigInt(githubId),
-        name:repo,
-        owner,
-        fullName:`${owner}/${repo}`,
-        url:`https://github.com/${owner}/${repo}`,
-        userId:session.user.id,
-        indexStatus: "indexing",
-        indexMessage: "Indexing queued",
-      }
-    })
+    if (existingRepo) {
+      await prisma.repository.update({
+        where: { id: existingRepo.id },
+        data: {
+          disconnectedAt: null,
+          indexStatus: "indexing",
+          indexMessage: "Indexing queued",
+        },
+      });
+    } else {
+      await prisma.repository.create({
+        data:{
+          githubId:BigInt(githubId),
+          name:repo,
+          owner,
+          fullName:`${owner}/${repo}`,
+          url:`https://github.com/${owner}/${repo}`,
+          userId:session.user.id,
+          indexStatus: "indexing",
+          indexMessage: "Indexing queued",
+        }
+      })
+    }
 
     await incrementRepositoryCount(session.user.id);
 
-    //usage tracking
-
-    //rag indexing repo
     try {
       await inngest.send({
         name: "repository.connected",
