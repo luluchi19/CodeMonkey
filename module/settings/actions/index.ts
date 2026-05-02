@@ -3,8 +3,9 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { deleteWebhook } from "@/module/github/lib/github";
+import { deleteWebhook, ensureRepositoryWebhook } from "@/module/github/lib/github";
 import { decrementRepositoryCount } from "@/module/payment/lib/subscription";
+import { inngest } from "@/inngest/client";
 
 const REVIEW_SECTION_KEYS = new Set([
   "walkthrough",
@@ -135,6 +136,7 @@ export async function getConnectedRepositories() {
         fullName: true,
         url: true,
         createdAt: true,
+        updatedAt: true,
         indexStatus: true,
         indexMessage: true,
         indexedAt: true,
@@ -143,6 +145,19 @@ export async function getConnectedRepositories() {
         createdAt: "desc"
       }
     })
+
+    if (repositories.length > 0) {
+      const syncResults = await Promise.allSettled(
+        repositories.map((repo) => ensureRepositoryWebhook(repo.fullName.split("/")[0], repo.name))
+      );
+      syncResults.forEach((result, index) => {
+        if (result.status === "rejected") {
+          const failed = repositories[index];
+          console.warn(`Webhook auto-sync failed for ${failed.fullName}`, result.reason);
+        }
+      });
+    }
+
     return repositories;
 
   } catch (error) {
@@ -161,7 +176,7 @@ export async function disconnectRepository(repositoryId: string) {
       throw new Error("Unauthorized")
     }
 
-    const repository = await prisma.repository.findUnique({
+    const repository = await prisma.repository.findFirst({
       where: {
         id: repositoryId,
         userId: session.user.id
@@ -183,6 +198,21 @@ export async function disconnectRepository(repositoryId: string) {
         disconnectedAt: new Date(),
       },
     });
+
+    try {
+      await inngest.send({
+        name: "repository.disconnected",
+        data: {
+          owner: repository.owner,
+          repo: repository.name,
+          userId: session.user.id,
+          repositoryId: repository.id,
+          reason: "manual disconnect",
+        },
+      });
+    } catch (error) {
+      console.warn("Failed to queue repository disconnect cleanup:", error);
+    }
 
     await decrementRepositoryCount(session.user.id, 1);
 
@@ -226,6 +256,25 @@ export async function disconnectAllRepositories() {
         disconnectedAt: new Date(),
       },
     })
+
+    try {
+      await Promise.all(
+        repositories.map((repo) =>
+          inngest.send({
+            name: "repository.disconnected",
+            data: {
+              owner: repo.owner,
+              repo: repo.name,
+              userId: session.user.id,
+              repositoryId: repo.id,
+              reason: "bulk disconnect",
+            },
+          })
+        )
+      );
+    } catch (error) {
+      console.warn("Failed to queue bulk repository disconnect cleanup:", error);
+    }
 
     if (result.count > 0) {
       await decrementRepositoryCount(session.user.id, result.count);

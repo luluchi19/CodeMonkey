@@ -83,7 +83,7 @@ export function ReviewAuditToggle() {
   }
 
   return (
-    <Card className="border-amber-300/60 bg-[linear-gradient(120deg,rgba(255,237,213,0.55),rgba(255,255,255,0.8))]">
+    <Card className="border-amber-300/60 bg-[linear-gradient(120deg,rgba(255,237,213,0.55),rgba(255,255,255,0.3))]">
       <CardHeader className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle>Review Quality Audit</CardTitle>
@@ -102,7 +102,7 @@ export function ReviewAuditToggle() {
             </TooltipContent>
           </Tooltip>
         </div>
-        <CardDescription>
+        <CardDescription className="text-neutral-100">
             Let a second LLM refine the AI review before it is posted.
         </CardDescription>
       </CardHeader>
@@ -111,7 +111,7 @@ export function ReviewAuditToggle() {
           <p className="text-sm font-medium">
             {isPro ? "Enable quality audit" : "Upgrade to PRO to unlock"}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[14px] text-neutral-100">
             Runs only when enabled. Keeps the final output as a single review.
           </p>
         </div>
@@ -121,6 +121,7 @@ export function ReviewAuditToggle() {
             updateMutation.mutate(value);
           }}
           disabled={isDisabled || isLoading}
+          className="cursor-pointer"
         />
       </CardContent>
     </Card>

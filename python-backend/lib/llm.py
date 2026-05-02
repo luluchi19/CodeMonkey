@@ -10,6 +10,7 @@ from app.config import settings
 GOOGLE_GEN_URL = "https://generativelanguage.googleapis.com/v1beta"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 NVIDIA_NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 
 def _parse_fallback_order() -> list[str]:
@@ -20,6 +21,9 @@ def _parse_fallback_order() -> list[str]:
 def _provider_model(provider: str, model_override: str | None = None) -> str:
     if provider == "gemini":
         return model_override or settings.genai_model
+    if provider == "deepseek":
+        model = model_override or settings.deepseek_model
+        return f"deepseek/{model}"
     if provider == "openrouter":
         return f"openrouter/{settings.openrouter_model}"
     if provider == "nvidia":
@@ -93,6 +97,15 @@ def _generate_openai_compatible(
     return message.get("content") or ""
 
 
+def _generate_deepseek(prompt: str, model: str) -> str:
+    return _generate_openai_compatible(
+        prompt,
+        model,
+        DEEPSEEK_BASE_URL,
+        settings.deepseek_api_key,
+    )
+
+
 def generate_text(
     prompt: str,
     model_override: str | None = None,
@@ -121,6 +134,13 @@ def generate_text(
                         OPENROUTER_BASE_URL,
                         settings.openrouter_api_key,
                     )
+                    print("llm_provider_selected", {"provider": provider, "model": model})
+                    if on_success:
+                        on_success(provider, model)
+                    return result
+                if provider == "deepseek":
+                    model = _provider_model(provider, model_override)
+                    result = _generate_deepseek(prompt, model)
                     print("llm_provider_selected", {"provider": provider, "model": model})
                     if on_success:
                         on_success(provider, model)

@@ -4,6 +4,9 @@ import prisma from "@/lib/db";
 import { headers } from "next/headers";
 import { types } from "util";
 
+const WEBHOOK_SYNC_TTL_MS = 5 * 60 * 1000;
+const webhookSyncCache = new Map<string, number>();
+
 export const getGithubToken = async ()=>{
     const session = await auth.api.getSession({
         headers: await headers(),
@@ -129,6 +132,25 @@ export const createWebhook = async (owner: string, repo: string) => {
   });
 
   return data;
+}
+
+export const ensureRepositoryWebhook = async (owner: string, repo: string) => {
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_BASE_URL}/api/webhooks/github`;
+  const cacheKey = `${owner}/${repo}:${webhookUrl}`;
+  const now = Date.now();
+  const lastSyncedAt = webhookSyncCache.get(cacheKey);
+
+  if (lastSyncedAt && now - lastSyncedAt < WEBHOOK_SYNC_TTL_MS) {
+    return;
+  }
+
+  webhookSyncCache.set(cacheKey, now);
+  try {
+    await createWebhook(owner, repo);
+  } catch (error) {
+    webhookSyncCache.delete(cacheKey);
+    throw error;
+  }
 }
 
 export const deleteWebhook = async (owner: string, repo: string) => {

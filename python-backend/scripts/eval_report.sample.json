@@ -1,0 +1,23 @@
+{
+  "summary": { "total": 1 },
+  "rows": [
+    {
+      "reviewId": "sample-backfill-1",
+      "repo": "TonFist/test-java-project",
+      "prNumber": 36,
+      "createdAt": "2026-04-29T06:14:26.110Z",
+      "groundedness": 5,
+      "relevance": 5,
+      "contextRelevance": 5,
+      "actionability": 2,
+      "falsePositiveRisk": 4,
+      "readability": 5,
+      "brevity": 5,
+      "coverage": 2,
+      "honestHelpful": 3.33,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "Sample import from eval-report"
+    }
+  ],
+  "legend": []
+}

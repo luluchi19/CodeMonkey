@@ -21,6 +21,9 @@ Required for indexing:
 
 Required for review pipeline:
 - `GENAI_MODEL` (default: models/gemini-2.0-flash)
+- `DEEPSEEK_API_KEY` (optional fallback provider)
+- `DEEPSEEK_MODEL` (default: deepseek-v4-flash)
+- `LLM_FALLBACK_ORDER` (default: gemini,deepseek,nvidia,openrouter)
 - `MAX_CONTEXT_CHUNKS` (default: 6)
 - `DIFF_MAX_CHARS` (default: 20000)
 
@@ -37,3 +40,21 @@ Optional review cost transparency:
 - `MAX_PROMPT_TOKENS_ESTIMATE` (cap prompt size)
 - `MAX_OUTPUT_TOKENS_ESTIMATE` (cap output size)
 - `APP_BASE_URL` (Next.js base URL for saving reviews)
+
+Optional review evaluation:
+- `EVALUATION_ENABLED` (default: true)
+- `EVALUATION_MODEL` (default: models/gemini-2.5-flash-lite)
+- `EVALUATION_USE_TRULENS` (default: false)
+
+## Evaluation outputs
+
+- Python sidecar logs review evaluation scores as `Review evaluation completed` events.
+- Export periodic report from Next.js API:
+	- JSON: `GET /api/reviews/eval-report`
+	- CSV: `GET /api/reviews/eval-report?format=csv`
+
+## TruLens dashboard helper
+
+After installing dependencies, run:
+
+`python scripts/run_trulens_dashboard.py`

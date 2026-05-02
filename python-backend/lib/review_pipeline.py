@@ -15,6 +15,8 @@ from .github_client import get_pull_request_data, get_pull_request_diff, post_re
 from .citations import collect_references
 from .retriever import retrieve_context
 from .llm import generate_text
+from .review_evaluator import evaluate_review_metrics
+from .trulens_recorder import record_trulens_review
 
 
 def _extract_diff_files(diff: str) -> list[str]:
@@ -624,6 +626,61 @@ async def run_review(payload: dict[str, Any]) -> dict[str, Any]:
                     {"elapsedMs": elapsed_ms(), "error": str(exc)},
                 )
 
+        evaluation_metrics = None
+        try:
+            evaluation_metrics = evaluate_review_metrics(
+                title,
+                description,
+                diff,
+                context,
+                review,
+            )
+            if evaluation_metrics:
+                _post_review_event(
+                    review_id,
+                    "info",
+                    "Review evaluation completed",
+                    {
+                        "elapsedMs": elapsed_ms(),
+                        "scores": evaluation_metrics,
+                    },
+                )
+        except Exception as exc:
+            _post_review_event(
+                review_id,
+                "warn",
+                "Review evaluation failed",
+                {"elapsedMs": elapsed_ms(), "error": str(exc)},
+            )
+
+        if settings.evaluation_use_trulens:
+            try:
+                ok, message = record_trulens_review(
+                    {
+                        "repo": f"{owner}/{repo}",
+                        "prNumber": pr_number,
+                        "title": title,
+                        "description": description,
+                        "diff": diff[:20000],
+                        "context": context[:4],
+                        "review": review,
+                        "scores": evaluation_metrics,
+                    }
+                )
+                _post_review_event(
+                    review_id,
+                    "info" if ok else "warn",
+                    "TruLens recording" if ok else "TruLens recording skipped",
+                    {"detail": message, "elapsedMs": elapsed_ms()},
+                )
+            except Exception as exc:
+                _post_review_event(
+                    review_id,
+                    "warn",
+                    "TruLens recording failed",
+                    {"elapsedMs": elapsed_ms(), "error": str(exc)},
+                )
+
         _post_review_event(
             review_id,
             "info",
@@ -693,6 +750,7 @@ async def run_review(payload: dict[str, Any]) -> dict[str, Any]:
                     "review": review,
                     "status": "completed",
                     "reviewId": review_id,
+                    "evaluation": evaluation_metrics,
                     **metrics,
                 },
                 review,
@@ -732,6 +790,7 @@ async def run_review(payload: dict[str, Any]) -> dict[str, Any]:
             "llmModel": selected_model,
             "auditProvider": audit_provider,
             "auditModel": audit_model,
+            "evaluation": evaluation_metrics,
             **metrics,
         }
     except Exception as exc:

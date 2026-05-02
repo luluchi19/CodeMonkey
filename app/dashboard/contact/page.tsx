@@ -32,7 +32,7 @@ export default function ContactPage() {
           </CardHeader>
           <CardContent>
             <a
-              className="text-sm font-semibold text-amber-700 hover:text-amber-800"
+              className="text-sm font-semibold text-amber-700 hover:text-amber-600"
               href="mailto:giangnguyeen1910@gmail.com"
             >
               giangnguyeen1910@gmail.com
@@ -57,7 +57,7 @@ export default function ContactPage() {
           </CardHeader>
           <CardContent>
             <a
-              className="text-sm font-semibold text-slate-700 hover:text-slate-900"
+              className="text-sm font-semibold text-slate-500 hover:text-slate-400"
               href="https://github.com/luluchi19"
               target="_blank"
               rel="noreferrer"
