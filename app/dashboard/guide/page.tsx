@@ -1,106 +1,203 @@
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CopyableCodeBlock } from "@/module/guide/components/copyable-code-block";
+import { GuideScreenshotCard } from "@/module/guide/components/guide-screenshot-card";
+import {
+  gitCommandBlocks,
+  imageSlots,
+  overviewParagraphs,
+  productHighlights,
+  reviewCriteria,
+  settingsEffects,
+  workflowSteps,
+} from "@/module/guide/content/guide-content";
 
-const steps = [
-  {
-    title: "Connect a repository",
-    detail:
-      "Open the Repository page, pick a repo, and click Connect. Wait for the status to switch to Connected.",
-  },
-  {
-    title: "Open a pull request",
-    detail:
-      "Create or update a PR in GitHub. CodeMonkey listens for new PR events automatically.",
-  },
-  {
-    title: "Track review progress",
-    detail:
-      "Visit Reviews to see timelines, ETA, and the final review comment once it posts.",
-  },
-  {
-    title: "Tune your review template",
-    detail:
-      "Go to Settings and pick which review sections you want included in every PR review.",
-  },
-  {
-    title: "Share results",
-    detail:
-      "Open the PR comment, apply the suggestions, and re-run when needed.",
-  },
-];
+function renderRichText(value: string) {
+  const parts = value.split(/(\*\*[^*]+\*\*)/g);
 
-const tips = [
-  "Keep PRs focused for faster analysis and lower token use.",
-  "Use the References section to add official docs that the model should cite.",
-  "If indexing fails, disconnect and reconnect the repository to retry.",
-];
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${part}-${index}`} className="font-semibold text-foreground">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+}
 
 export default function GuidePage() {
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-amber-50 via-white to-orange-50 p-8 shadow-sm dark:from-orange-950/40 dark:via-background dark:to-amber-900/40">
-        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-amber-200/50 blur-3xl dark:bg-amber-600/20" />
-        <div className="absolute -bottom-16 -left-10 h-48 w-48 rounded-full bg-orange-200/40 blur-3xl dark:bg-orange-700/20" />
+      <section className="relative overflow-hidden rounded-3xl border border-border/70 bg-linear-to-br from-amber-100 via-white to-orange-100 p-8 shadow-sm dark:from-amber-950/35 dark:via-zinc-950 dark:to-orange-950/30">
+        <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-amber-300/40 blur-3xl dark:bg-amber-600/20" />
+        <div className="absolute -bottom-20 -left-12 h-56 w-56 rounded-full bg-orange-300/30 blur-3xl dark:bg-orange-700/20" />
 
-        <div className="relative space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="relative max-w-3xl space-y-4">
           <Badge variant="secondary" className="w-fit">
-            Quick Start Guide
+            Guide
           </Badge>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Your CodeMonkey Workflow
+          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            Overview - how CodeMonkey works
           </h1>
-          <p className="text-muted-foreground max-w-2xl">
-            This page walks you through the full CodeMonkey flow, from connecting
-            a repository to reviewing the final AI feedback.
+          <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+            A practical, step-by-step guide for connecting a repository, opening a pull request,
+            reading the review output, and tuning the settings that shape review quality.
           </p>
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <Card className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <CardContent className="space-y-6 p-6">
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold">Step-by-step</h2>
-              <p className="text-sm text-muted-foreground">
-                Follow each step in order for the smoothest experience.
+      <section className="space-y-6">
+        <Card className="border-border/70 bg-card/80 shadow-sm">
+          <CardHeader>
+            <Badge variant="outline" className="w-fit">
+              Overview
+            </Badge>
+            <CardTitle className="text-2xl">How it works at a glance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {overviewParagraphs.map((paragraph) => (
+              <p key={paragraph} className="text-sm leading-7 text-muted-foreground sm:text-base">
+                {paragraph}
+              </p>
+            ))}
+
+            <div className="rounded-2xl border border-border/70 bg-muted/20 p-5">
+              <p className="text-sm font-semibold text-foreground">Quick path</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Connect the repository, open the pull request, review the findings, and then fine-tune
+                the settings. The sections below show exactly where to click and what to copy.
               </p>
             </div>
-            <ol className="space-y-4">
-              {steps.map((step, index) => (
-                <li
-                  key={step.title}
-                  className="rounded-xl border bg-card/70 p-4 shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-                      {index + 1}
-                    </span>
-                    <h3 className="text-base font-semibold">{step.title}</h3>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    <strong className="text-foreground">Tip:</strong> {step.detail}
-                  </p>
-                </li>
-              ))}
-            </ol>
           </CardContent>
         </Card>
 
-        <Card className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
-          <CardContent className="space-y-4 p-6">
-            <div>
-              <h2 className="text-lg font-semibold">Helpful Tips</h2>
-              <p className="text-sm text-muted-foreground">
-                Best practices to keep reviews accurate and fast.
-              </p>
+        <Card className="border-border/70 bg-card/80 shadow-sm">
+          <CardHeader>
+            <Badge variant="outline" className="w-fit">
+              Workflow
+            </Badge>
+            <CardTitle className="text-2xl">From branch to reviewed PR</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {workflowSteps.map((step) => {
+              const imageSlot = step.imageKey
+                ? imageSlots.find((slot) => slot.title === step.imageKey)
+                : null;
+
+              return (
+                <div
+                  key={step.step}
+                  className="rounded-2xl border border-border/70 bg-background/40 p-4 shadow-sm"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
+                      {step.step}
+                    </div>
+                    <div className="min-w-0 space-y-3">
+                      <div className="space-y-1">
+                        <h3 className="text-base font-semibold tracking-tight">{step.title}</h3>
+                        <p className="text-sm leading-6 text-muted-foreground">
+                          {renderRichText(step.description)}
+                        </p>
+                      </div>
+
+                      {step.step === "2" ? (
+                        <div className="space-y-3 pt-1">
+                          <p className="text-sm font-semibold text-foreground">
+                            Copy each block below in the exact order shown.
+                          </p>
+                          {gitCommandBlocks.map((item) => (
+                            <CopyableCodeBlock
+                              key={item.title}
+                              title={item.title}
+                              description="Each block contains one command only, which keeps the flow easy to copy and verify."
+                              code={item.code}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {imageSlot ? (
+                        <div className="pt-1">
+                          <GuideScreenshotCard {...imageSlot} />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 bg-card/80 shadow-sm">
+          <CardHeader>
+            <Badge variant="outline" className="w-fit">
+              Settings
+            </Badge>
+            <CardTitle className="text-2xl">How settings shape output</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {settingsEffects.map((item) => (
+              <Card key={item.key} className="border-border/70 bg-muted/20 p-4 shadow-sm">
+                <p className="text-sm font-semibold tracking-tight">{item.label}</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.effect}</p>
+              </Card>
+            ))}
+
+            <div className="space-y-4 pt-1">
+              {imageSlots
+                .filter(
+                  (slot) =>
+                    slot.title === "Settings review language" || slot.title === "Settings audit mode",
+                )
+                .map((slot) => (
+                  <GuideScreenshotCard key={slot.title} {...slot} />
+                ))}
             </div>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              {tips.map((tip) => (
-                <li key={tip} className="rounded-lg border bg-card/70 p-3">
-                  <strong className="text-foreground">Note:</strong> {tip}
-                </li>
-              ))}
-            </ul>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 bg-card/80 shadow-sm">
+          <CardHeader>
+            <Badge variant="outline" className="w-fit">
+              Review Quality
+            </Badge>
+            <CardTitle className="text-2xl">What strong reviews include</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {reviewCriteria.map((criterion) => (
+              <Card key={criterion.title} className="border-border/70 bg-muted/20 p-4 shadow-sm">
+                <p className="text-sm font-semibold tracking-tight">{criterion.title}</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {criterion.description}
+                </p>
+              </Card>
+            ))}
+            <p className="pt-1 text-sm leading-6 text-muted-foreground">
+              Reference style is similar to Greptile/Qodo: concise comments, grounded evidence,
+              and clear next actions for the author.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 bg-card/80 shadow-sm">
+          <CardHeader>
+            <Badge variant="outline" className="w-fit">
+              Product Value
+            </Badge>
+            <CardTitle className="text-2xl">Why teams use CodeMonkey</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {productHighlights.map((item) => (
+              <Card key={item.title} className="border-border/70 bg-muted/20 p-4 shadow-sm">
+                <p className="text-sm font-semibold tracking-tight">{item.title}</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
+              </Card>
+            ))}
           </CardContent>
         </Card>
       </section>

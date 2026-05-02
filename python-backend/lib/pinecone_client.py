@@ -26,3 +26,9 @@ class PineconeClient:
             include_metadata=True,
         )
         return list(results.get("matches", []))
+
+    def delete_by_repo(self, repo_id: str) -> None:
+        self._index.delete(filter={"repoId": repo_id})
+
+    def delete_by_repo_and_path(self, repo_id: str, path: str) -> None:
+        self._index.delete(filter={"repoId": repo_id, "path": path})

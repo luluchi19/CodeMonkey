@@ -24,6 +24,20 @@ def _language_for_path(path: str) -> str | None:
         return "javascript"
     if lower.endswith(".py"):
         return "python"
+    if lower.endswith(".java"):
+        return "java"
+    if lower.endswith((".kt", ".kts")):
+        return "kotlin"
+    if lower.endswith(".go"):
+        return "go"
+    if lower.endswith(".cs"):
+        return "c_sharp"
+    if lower.endswith((".c", ".h")):
+        return "c"
+    if lower.endswith((".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx")):
+        return "cpp"
+    if lower.endswith(".rs"):
+        return "rust"
     return None
 
 
@@ -36,10 +50,17 @@ def _extract_symbol_name(node, source: bytes) -> str:
 
 def _query_nodes(lang: str, root) -> Iterable:
     targets = {
-        "javascript": {"function_declaration", "class_declaration"},
-        "typescript": {"function_declaration", "class_declaration"},
-        "tsx": {"function_declaration", "class_declaration"},
+        "javascript": {"function_declaration", "class_declaration", "method_definition"},
+        "typescript": {"function_declaration", "class_declaration", "method_definition"},
+        "tsx": {"function_declaration", "class_declaration", "method_definition"},
         "python": {"function_definition", "class_definition"},
+        "java": {"class_declaration", "interface_declaration", "method_declaration", "constructor_declaration"},
+        "kotlin": {"class_declaration", "object_declaration", "interface_declaration", "function_declaration"},
+        "go": {"function_declaration", "method_declaration", "type_declaration"},
+        "c_sharp": {"class_declaration", "struct_declaration", "interface_declaration", "method_declaration", "constructor_declaration"},
+        "c": {"function_definition"},
+        "cpp": {"function_definition", "class_specifier", "struct_specifier"},
+        "rust": {"function_item", "impl_item", "struct_item", "enum_item", "trait_item"},
     }
     wanted = targets.get(lang, set())
     if not wanted:
@@ -60,9 +81,13 @@ def chunk_with_tree_sitter(path: str, content: str, max_symbols: int) -> list[Co
     if not lang:
         return []
 
-    parser = get_parser(lang)
-    source = content.encode("utf-8")
-    tree = parser.parse(source)
+    try:
+        parser = get_parser(lang)
+        source = content.encode("utf-8")
+        tree = parser.parse(source)
+    except Exception as exc:
+        print("tree_sitter_fallback", {"path": path, "error": str(exc)})
+        return []
 
     chunks: list[CodeChunk] = []
     for idx, node in enumerate(_query_nodes(lang, tree.root_node)):

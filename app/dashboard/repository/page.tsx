@@ -44,7 +44,9 @@ const RepositoryPage = () => {
 
   const {mutate: connectRepo} = useConnectRepository();
 
-  const [localConnectingId, setLocalConnectingId] = useState<number | null>(null);
+  const [localConnectingIds, setLocalConnectingIds] = useState<Set<number>>(
+    () => new Set()
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const observerTarget = useRef<HTMLDivElement>(null);
 
@@ -108,7 +110,11 @@ const RepositoryPage = () => {
   );
 
   const handleConnect = (repo: Repository) => {
-    setLocalConnectingId(repo.id);
+    setLocalConnectingIds((prev) => {
+      const next = new Set(prev);
+      next.add(repo.id);
+      return next;
+    });
     connectRepo(
       {
         owner: repo.full_name.split("/")[0],
@@ -116,7 +122,13 @@ const RepositoryPage = () => {
         githubId: repo.id
       },
       {
-        onSettled:()=>setLocalConnectingId(null)
+        onSettled: () => {
+          setLocalConnectingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(repo.id);
+            return next;
+          });
+        }
       }
     )
   }
@@ -134,15 +146,11 @@ const RepositoryPage = () => {
       return <Badge variant="destructive">Index Failed</Badge>;
     }
 
-    if (status === "warning") {
-      return <Badge variant="secondary">Connected (warning)</Badge>;
-    }
-
     return <Badge variant="secondary">Connected</Badge>;
   };
 
   const getConnectLabel = (repo: Repository) => {
-    if (localConnectingId === repo.id) {
+    if (localConnectingIds.has(repo.id)) {
       return "Connecting...";
     }
 
@@ -156,10 +164,6 @@ const RepositoryPage = () => {
 
     if (repo.indexStatus === "failed") {
       return "Index Failed";
-    }
-
-    if (repo.indexStatus === "warning") {
-      return "Connected (warning)";
     }
 
     return "Connected";
@@ -222,7 +226,7 @@ const RepositoryPage = () => {
                     <Button
                       onClick={() => handleConnect(repo)}
                       disabled={
-                        localConnectingId === repo.id ||
+                        localConnectingIds.has(repo.id) ||
                         repo.isConnected
                       }
                       variant={

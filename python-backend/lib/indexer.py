@@ -10,21 +10,110 @@ from .github_client import get_default_branch, get_file_content, get_repo_tree, 
 from .pinecone_client import PineconeClient
 
 
-def _is_text_path(path: str) -> bool:
-    return not path.lower().endswith(
-        (
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".gif",
-            ".svg",
-            ".ico",
-            ".pdf",
-            ".zip",
-            ".tar",
-            ".gz",
-        )
-    )
+SKIP_DIRS = {
+    "node_modules",
+    "dist",
+    "build",
+    ".next",
+    ".nuxt",
+    "out",
+    "coverage",
+    ".turbo",
+    ".vercel",
+    ".expo",
+    ".cache",
+    "venv",
+    ".venv",
+    "env",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".tox",
+    ".eggs",
+    "target",
+    ".gradle",
+    ".mvn",
+    "bin",
+}
+
+SKIP_FILES = {
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "bun.lockb",
+    "poetry.lock",
+    "pipfile.lock",
+    "pom.lock",
+}
+
+ALLOWED_EXTENSIONS = {
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".mjs",
+    ".cjs",
+    ".py",
+    ".java",
+    ".kt",
+    ".kts",
+    ".go",
+    ".cs",
+    ".c",
+    ".h",
+    ".cc",
+    ".cpp",
+    ".cxx",
+    ".hpp",
+    ".hh",
+    ".hxx",
+    ".rs",
+    ".md",
+    ".txt",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".xml",
+    ".gradle",
+    ".sh",
+}
+
+
+def _should_index_file(path: str) -> bool:
+    lower = path.lower().replace("\\", "/")
+
+    if lower.rsplit("/", 1)[-1] in SKIP_FILES:
+        return False
+
+    if any(part in SKIP_DIRS for part in lower.split("/")):
+        return False
+
+    if lower.endswith((
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".ico",
+        ".pdf",
+        ".zip",
+        ".tar",
+        ".gz",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".otf",
+        ".mp4",
+        ".mov",
+        ".avi",
+        ".webm",
+    )):
+        return False
+
+    return lower.endswith(tuple(ALLOWED_EXTENSIONS))
 
 
 def _build_record(repo_id: str, path: str, chunk: str, chunk_index: int) -> dict:
@@ -66,7 +155,7 @@ async def index_repository(payload: dict[str, Any]) -> dict[str, Any]:
     pinecone_client = PineconeClient()
 
     for path in iter_file_paths(tree):
-        if not _is_text_path(path):
+        if not _should_index_file(path):
             continue
 
         if files_indexed >= settings.max_files:
@@ -108,3 +197,17 @@ async def index_repository(payload: dict[str, Any]) -> dict[str, Any]:
         pinecone_client.upsert(records[i : i + batch_size])
 
     return {"repo": repo_id, "filesIndexed": files_indexed, "records": len(records)}
+
+
+async def delete_repository_vectors(payload: dict[str, Any]) -> dict[str, Any]:
+    owner = payload.get("owner")
+    repo = payload.get("repo")
+
+    if not owner or not repo:
+        raise ValueError("Missing owner/repo in payload")
+
+    repo_id = f"{owner}/{repo}"
+    pinecone_client = PineconeClient()
+    pinecone_client.delete_by_repo(repo_id)
+
+    return {"repo": repo_id, "deleted": True}

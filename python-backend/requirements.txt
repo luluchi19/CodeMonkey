@@ -3,6 +3,7 @@ uvicorn[standard]
 pydantic-settings
 requests
 pinecone
-tree_sitter
+tree_sitter==0.20.4
 tree_sitter_languages
 litellm
+trulens

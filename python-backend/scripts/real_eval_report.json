@@ -1,0 +1,206 @@
+{
+  "summary": {
+    "total": 8,
+    "groundednessAvg": 4.75,
+    "relevanceAvg": 5,
+    "contextRelevanceAvg": 4.875,
+    "actionabilityAvg": 3.462,
+    "falsePositiveRiskAvg": 1.688,
+    "coverageAvg": 4,
+    "honestHelpfulAvg": 4.232
+  },
+  "rows": [
+    {
+      "reviewId": "cmojnswcc001xz0wq6v2fi9bl",
+      "repo": "TonFist/test-java-project",
+      "prNumber": 36,
+      "createdAt": "2026-04-29T06:14:26.110Z",
+      "groundedness": 5,
+      "relevance": 5,
+      "contextRelevance": 5,
+      "actionability": 2,
+      "falsePositiveRisk": 4,
+      "readability": 5,
+      "brevity": 5,
+      "coverage": 2,
+      "honestHelpful": 3.33,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "The review identifies several potential issues and suggestions that are not present in the provided diff. For instance, there's no database interaction shown, and password encryption is irrelevant. The review also mentions features like registration which are not fully implemented in the diff. Some suggestions are not actionable due to the absence of the mentioned code."
+    },
+    {
+      "reviewId": "cmojnhxbm001jz0wqagyek4r2",
+      "repo": "TonFist/test-java-project",
+      "prNumber": 35,
+      "createdAt": "2026-04-29T06:06:24.829Z",
+      "groundedness": 5,
+      "relevance": 5,
+      "contextRelevance": 5,
+      "actionability": 4,
+      "falsePositiveRisk": 1,
+      "readability": 5,
+      "brevity": 5,
+      "coverage": 4.5,
+      "honestHelpful": 4.58,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "The review accurately identifies the new features and improvements. It also highlights significant security concerns regarding password handling and input validation."
+    },
+    {
+      "reviewId": "cmojm4vfe0016z0wqnwrt3tc8",
+      "repo": "TonFist/test-python-project",
+      "prNumber": 5,
+      "createdAt": "2026-04-29T05:28:07.770Z",
+      "groundedness": 5,
+      "relevance": 5,
+      "contextRelevance": 5,
+      "actionability": 4,
+      "falsePositiveRisk": 1,
+      "readability": 5,
+      "brevity": 4,
+      "coverage": 4.5,
+      "honestHelpful": 4.58,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "The review is comprehensive and highlights significant areas for improvement in the custom HTTP server implementation. It correctly identifies bugs, risks, and provides actionable suggestions."
+    },
+    {
+      "reviewId": "cmojlo6cc000tz0wqo31a3k6r",
+      "repo": "TonFist/test-java-project",
+      "prNumber": 34,
+      "createdAt": "2026-04-29T05:15:01.917Z",
+      "groundedness": 5,
+      "relevance": 5,
+      "contextRelevance": 5,
+      "actionability": 4.5,
+      "falsePositiveRisk": 1.5,
+      "readability": 4.5,
+      "brevity": 4,
+      "coverage": 4.5,
+      "honestHelpful": 4.58,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "The PR introduces significant new functionality and UI components, improving the application's structure. However, it contains a critical security vulnerability regarding password storage."
+    },
+    {
+      "reviewId": "cmojlanjz000gz0wq2p4jkndo",
+      "repo": "TonFist/test-java-project",
+      "prNumber": 33,
+      "createdAt": "2026-04-29T05:04:46.484Z",
+      "groundedness": 3.5,
+      "relevance": 5,
+      "contextRelevance": 5,
+      "actionability": 2,
+      "falsePositiveRisk": 3,
+      "readability": 4.5,
+      "brevity": 4,
+      "coverage": 3.5,
+      "honestHelpful": 3.5,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "The PR significantly expands the application's functionality by introducing multiple panels, user management, and navigation using CardLayout. However, critical parts of the main logic are missing from the diff, and there are significant security vulnerabilities in password handling."
+    },
+    {
+      "reviewId": "cmojkidmb0003z0wq9zclfaul",
+      "repo": "TonFist/test-python-project",
+      "prNumber": 4,
+      "createdAt": "2026-04-29T04:42:38.933Z",
+      "groundedness": 5,
+      "relevance": 5,
+      "contextRelevance": 5,
+      "actionability": 4.5,
+      "falsePositiveRisk": 1,
+      "readability": 5,
+      "brevity": 4,
+      "coverage": 4.5,
+      "honestHelpful": 4.67,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "The review correctly identifies the purpose and strengths of the PR. It also provides actionable suggestions for improvement, particularly regarding query parameter handling and security considerations for HTTP methods."
+    },
+    {
+      "reviewId": "cmoiqzv2f000238wqwh0s7nk2",
+      "repo": "TonFist/test-java-project",
+      "prNumber": 32,
+      "createdAt": "2026-04-28T14:56:28.055Z",
+      "groundedness": 4.5,
+      "relevance": 5,
+      "contextRelevance": 4,
+      "actionability": 3.5,
+      "falsePositiveRisk": 1,
+      "readability": 4.5,
+      "brevity": 4,
+      "coverage": 4.5,
+      "honestHelpful": 4.25,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "The review correctly identifies the addition of new panels and the demonstration of design patterns. It also highlights the security risks associated with password handling, which is a crucial point. The suggestion about the necessity of the Flyweight pattern could be more specific."
+    },
+    {
+      "reviewId": "cmoei59xq0002e8wqo2pz5rec",
+      "repo": "TonFist/test-python-project",
+      "prNumber": 1,
+      "createdAt": "2026-04-25T15:37:55.506Z",
+      "groundedness": 5,
+      "relevance": 5,
+      "contextRelevance": 5,
+      "actionability": 3.2,
+      "falsePositiveRisk": 1,
+      "readability": 4,
+      "brevity": 3,
+      "coverage": 4,
+      "honestHelpful": 4.37,
+      "model": "models/gemini-2.5-flash-lite",
+      "notes": "The review correctly identifies areas for improvement, particularly around error handling and edge cases in routing. It offers actionable suggestions that would enhance the robustness and maintainability of the new routing system."
+    }
+  ],
+  "legend": [
+    {
+      "metric": "groundedness",
+      "definition": "Claims are supported by diff/context.",
+      "goodThreshold": "\u003E= 4.0",
+      "source": "LAURA (truthfulness/M-Score motivation)"
+    },
+    {
+      "metric": "relevance",
+      "definition": "Comments focus on this PR and changed code.",
+      "goodThreshold": "\u003E= 4.0",
+      "source": "LAURA/RARe"
+    },
+    {
+      "metric": "contextRelevance",
+      "definition": "Retrieved context is useful for this PR.",
+      "goodThreshold": "\u003E= 3.5",
+      "source": "RAG best practices"
+    },
+    {
+      "metric": "actionability",
+      "definition": "Suggestions are concrete and feasible.",
+      "goodThreshold": "\u003E= 3.5",
+      "source": "LAURA (Operability)"
+    },
+    {
+      "metric": "falsePositiveRisk",
+      "definition": "Higher means more misleading/incorrect claims.",
+      "goodThreshold": "\u003C= 2.0",
+      "source": "LAURA (M-Score)"
+    },
+    {
+      "metric": "readability",
+      "definition": "Clear, easy-to-read language.",
+      "goodThreshold": "\u003E= 3.5",
+      "source": "LAURA (Readability)"
+    },
+    {
+      "metric": "brevity",
+      "definition": "Concise without losing key points.",
+      "goodThreshold": "\u003E= 3.0",
+      "source": "LAURA (Brevity)"
+    },
+    {
+      "metric": "coverage",
+      "definition": "Covers important issues likely present.",
+      "goodThreshold": "\u003E= 3.5",
+      "source": "LAURA (Sufficiency)"
+    },
+    {
+      "metric": "honestHelpful",
+      "definition": "Composite: truthfulness + relevance + actionability.",
+      "goodThreshold": "\u003E= 3.5",
+      "source": "Derived (project rubric)"
+    }
+  ]
+}
