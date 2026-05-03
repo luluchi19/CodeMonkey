@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, WheelEvent } from "react";
+import React, { useState, useRef, MouseEvent } from "react";
 import Image from "next/image";
 
 import {
@@ -60,13 +60,7 @@ export function GuideScreenshotCard({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div
-          className="relative h-[60vh] overflow-hidden rounded-2xl border border-border/70 bg-background"
-          onWheel={(e: WheelEvent) => {
-            // prevent page scroll while zooming
-            e.preventDefault();
-          }}
-        >
+        <div className="relative h-[60vh] overflow-hidden rounded-2xl border border-border/70 bg-background">
           <ZoomableImage src={path} alt={title} />
         </div>
       </DialogContent>
@@ -76,36 +70,78 @@ export function GuideScreenshotCard({
 
 function ZoomableImage({ src, alt }: { src: string; alt: string }) {
   const [scale, setScale] = useState<number>(1);
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-
-  function onWheel(e: WheelEvent) {
-    e.preventDefault();
-    const delta = e.deltaY;
-    const factor = delta > 0 ? 0.9 : 1.1;
-    setScale((s) => {
-      const next = Math.min(4, Math.max(1, +(s * factor).toFixed(2)));
-      return next;
-    });
-  }
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   function onDoubleClick() {
+    const container = containerRef.current;
+    const content = contentRef.current;
     setScale(1);
+    if (content) content.style.transformOrigin = "center";
+    if (container) {
+      requestAnimationFrame(() => {
+        container.scrollLeft = 0;
+        container.scrollTop = 0;
+      });
+    }
   }
 
+  function onClick(e: MouseEvent) {
+    e.stopPropagation();
+    const container = containerRef.current;
+    const content = contentRef.current;
+    const rect = container?.getBoundingClientRect();
+    const originX = rect ? e.clientX - rect.left : undefined;
+    const originY = rect ? e.clientY - rect.top : undefined;
+
+    const prev = scale;
+    const next = prev === 1 ? 2.2 : 1;
+
+    if (content && originX !== undefined && originY !== undefined) {
+      content.style.transformOrigin = `${originX}px ${originY}px`;
+    }
+
+    if (container && originX !== undefined && originY !== undefined) {
+      const cx = originX + container.scrollLeft;
+      const cy = originY + container.scrollTop;
+      const newScrollLeft = Math.max(0, (cx * next) / prev - originX);
+      const newScrollTop = Math.max(0, (cy * next) / prev - originY);
+      setScale(next);
+      requestAnimationFrame(() => {
+        container.scrollLeft = newScrollLeft;
+        container.scrollTop = newScrollTop;
+      });
+      return;
+    }
+
+    setScale(next);
+  }
+
+  // Render a scrollable container; when the inner image is scaled > 1, overflow:auto
+  // provides scrollbars for panning horizontally/vertically.
   return (
-    <div
-      ref={wrapperRef}
-      onWheel={onWheel}
-      onDoubleClick={onDoubleClick}
-      className="relative h-full w-full touch-none"
-      role="img"
-      aria-label={alt}
-    >
+    <div ref={containerRef} className="h-full w-full overflow-auto" role="img" aria-label={alt}>
       <div
-        className="absolute inset-0 flex items-center justify-center"
-        style={{ transform: `scale(${scale})`, transition: "transform 120ms" }}
+        ref={contentRef}
+        onClick={onClick}
+        onDoubleClick={onDoubleClick}
+        className="inline-block p-2"
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: "center",
+          transition: "transform 120ms",
+          cursor: scale === 1 ? "zoom-in" : "zoom-out",
+        }}
+        title={scale === 1 ? "Click to zoom" : "Click to reset zoom"}
       >
-        <Image src={src} alt={alt} fill sizes="100vw" className="object-contain p-2" />
+        <Image
+          src={src}
+          alt={alt}
+          width={1200}
+          height={800}
+          sizes="(max-width: 768px) 100vw, 1200px"
+          className="object-contain"
+        />
       </div>
     </div>
   );
