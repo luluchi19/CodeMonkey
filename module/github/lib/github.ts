@@ -357,6 +357,31 @@ export async function getPullRequestDetails(
   };
 }
 
+/**
+ * Post a processing status comment to a PR (displayed immediately while review is pending).
+ * Format: SaaS-style with inline formatting (bold, italic, emoji).
+ */
+export async function postProcessingComment(
+  token: string,
+  owner: string,
+  repo: string,
+  prNumber: number
+): Promise<void> {
+  const octokit = new Octokit({ auth: token });
+
+  try {
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: prNumber,
+      body: `⚙️ **Currently processing** new changes in this PR. This may take a few minutes, please wait...\n\n*Powered by CodeMonkey*`,
+    });
+  } catch (error) {
+    // Log but do not throw - allow review to continue even if comment fails
+    console.warn(`Failed to post processing comment for ${owner}/${repo}#${prNumber}:`, error);
+  }
+}
+
 export async function postReviewComment(
   token:string,
   owner:string,

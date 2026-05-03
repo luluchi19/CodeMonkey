@@ -2,7 +2,7 @@
 
 import { inngest } from "@/inngest/client";
 import prisma from "@/lib/db";
-import { getPullRequestDiff } from "@/module/github/lib/github";
+import { getPullRequestDiff, postProcessingComment } from "@/module/github/lib/github";
 import { canCreateReview, incrementReviewCount } from "@/module/payment/lib/subscription";
 import { getMaxTokensPerPr } from "@/module/payment/lib/limits";
 
@@ -62,6 +62,10 @@ export async function reviewPullRequest(
     console.log("GitHub token OK");
 
     const token = githubAccount.accessToken;
+
+    // Post an immediate processing comment to GitHub (non-blocking)
+    await postProcessingComment(token, owner, repo, prNumber);
+    console.log(`Posted processing comment to ${owner}/${repo}#${prNumber}`);
 
     const prDetails = await getPullRequestDiff(token, owner, repo, prNumber);
     const title = prDetails.title;

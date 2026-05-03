@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import prisma from "@/lib/db";
+import { isMetricsAdmin } from "@/lib/access-control";
 
 type EvalScores = {
   groundedness: number;
@@ -15,11 +16,19 @@ type EvalScores = {
   honestHelpful: number;
   notes: string;
   model: string;
+  // Metadata metrics (optional, computed from PR data)
+  codeChurnRatio?: number;
+  reviewCoverage?: number;
+  suggestionDensity?: number;
+  filesChanged?: number;
+  reasoning?: string;
+  keyIssuesMissed?: string;
 };
 
 type MetricLegend = {
   metric: string;
   definition: string;
+  range: string;
   goodThreshold: string;
   source: string;
 };
@@ -27,57 +36,95 @@ type MetricLegend = {
 const METRIC_LEGEND: MetricLegend[] = [
   {
     metric: "groundedness",
-    definition: "Claims are supported by diff/context. / Các nhận định phải có bằng chứng từ diff/ngữ cảnh.",
+    definition: "Claims are supported by diff/context. / Cac nhan dinh phai co bang chung tu diff/ngu canh.",
+    range: "0-5",
     goodThreshold: ">= 4.0",
     source: "LAURA (truthfulness/M-Score motivation)",
   },
   {
     metric: "relevance",
-    definition: "Comments focus on this PR and changed code. / Bình luận phải bám đúng PR và phần code thay đổi.",
+    definition: "Comments focus on this PR and changed code. / Binh luan phai bam dung PR va phan code thay doi.",
+    range: "0-5",
     goodThreshold: ">= 4.0",
     source: "LAURA/RARe",
   },
   {
     metric: "contextRelevance",
-    definition: "Retrieved context is useful for this PR. / Context truy xuất phải hữu ích cho PR này.",
+    definition: "Retrieved context is useful for this PR. / Context truy xuat phai huu ich cho PR nay.",
+    range: "0-5",
     goodThreshold: ">= 3.5",
     source: "RAG best practices",
   },
   {
     metric: "actionability",
-    definition: "Suggestions are concrete and feasible. / Gợi ý phải cụ thể và khả thi.",
+    definition: "Suggestions are concrete and feasible. / Goi y phai cu the va kha thi.",
+    range: "0-5",
     goodThreshold: ">= 3.5",
     source: "LAURA (Operability)",
   },
   {
     metric: "falsePositiveRisk",
-    definition: "Higher means more misleading/incorrect claims. / Điểm cao hơn nghĩa là càng dễ có nhận định sai hoặc gây hiểu lầm.",
+    definition: "Higher means more misleading/incorrect claims. / Diem cao hon nghia la cang de co nhan dinh sai hoac gay hieu lam.",
+    range: "0-5",
     goodThreshold: "<= 2.0",
     source: "LAURA (M-Score)",
   },
   {
     metric: "readability",
-    definition: "Clear, easy-to-read language. / Ngôn ngữ rõ ràng, dễ đọc.",
+    definition: "Clear, easy-to-read language. / Ngon ngu ro rang, de doc.",
+    range: "0-5",
     goodThreshold: ">= 3.5",
     source: "LAURA (Readability)",
   },
   {
     metric: "brevity",
-    definition: "Concise without losing key points. / Ngắn gọn nhưng không mất ý chính.",
+    definition: "Concise without losing key points. / Ngan gon nhung khong mat y chinh.",
+    range: "0-5",
     goodThreshold: ">= 3.0",
     source: "LAURA (Brevity)",
   },
   {
     metric: "coverage",
-    definition: "Covers important issues likely present. / Bao quát các vấn đề quan trọng có khả năng tồn tại.",
+    definition: "Covers important issues likely present. / Bao quat cac van de quan trong co kha nang ton tai.",
+    range: "0-5",
     goodThreshold: ">= 3.5",
     source: "LAURA (Sufficiency)",
   },
   {
     metric: "honestHelpful",
-    definition: "Composite: truthfulness + relevance + actionability. / Điểm tổng hợp: tính đúng, mức liên quan và tính khả thi.",
+    definition: "Composite: truthfulness + relevance + actionability. / Diem tong hop: tinh dung, muc lien quan va tinh kha thi.",
+    range: "0-5",
     goodThreshold: ">= 3.5",
     source: "Derived (project rubric)",
+  },
+  // Metadata metrics (no LLM needed, computed from PR data)
+  {
+    metric: "codeChurnRatio",
+    definition: "(additions + deletions) / estimated_total_lines. Measures PR size complexity. / Ti le thay doi code = (them + xoa) / tong dong. Do do phuc tap kich thuoc PR.",
+    range: "0-1",
+    goodThreshold: "<= 0.3",
+    source: "GitHub PR metadata",
+  },
+  {
+    metric: "reviewCoverage",
+    definition: "Estimated % of changed lines mentioned in review. Higher = more comprehensive. / % dong thay doi duoc de cap trong review. Cao hon = bao phu tot hon.",
+    range: "0-1",
+    goodThreshold: ">= 0.3",
+    source: "Computed from diff vs review text",
+  },
+  {
+    metric: "suggestionDensity",
+    definition: "Number of suggestions per PR size (normalized per 10-line chunk). Adjusted for PR size context. / So luong de xuat / kich thuoc PR. Thich hop cho PR lon/nho.",
+    range: "0-5+",
+    goodThreshold: ">= 0.5",
+    source: "Review text analysis",
+  },
+  {
+    metric: "filesChanged",
+    definition: "Raw count of files modified in this PR. / Tong so file duoc thay doi trong PR nay.",
+    range: "0-1000+",
+    goodThreshold: "Info only",
+    source: "GitHub PR metadata",
   },
 ];
 
@@ -117,6 +164,13 @@ function parseScores(meta: unknown): EvalScores | null {
     honestHelpful: toNumber(scores.honestHelpful),
     notes: typeof scores.notes === "string" ? scores.notes : "",
     model: typeof scores.model === "string" ? scores.model : "",
+    // Metadata metrics (optional)
+    codeChurnRatio: scores.codeChurnRatio ? toNumber(scores.codeChurnRatio) : undefined,
+    reviewCoverage: scores.reviewCoverage ? toNumber(scores.reviewCoverage) : undefined,
+    suggestionDensity: scores.suggestionDensity ? toNumber(scores.suggestionDensity) : undefined,
+    filesChanged: scores.filesChanged ? toNumber(scores.filesChanged) : undefined,
+    reasoning: typeof scores.reasoning === "string" ? scores.reasoning : undefined,
+    keyIssuesMissed: typeof scores.keyIssuesMissed === "string" ? scores.keyIssuesMissed : undefined,
   };
 }
 
@@ -126,14 +180,14 @@ function toCsv(
 ): string {
   if (rows.length === 0) {
     const emptyHeader =
-      "reviewId,repo,prNumber,createdAt,groundedness,relevance,contextRelevance,actionability,falsePositiveRisk,readability,brevity,coverage,honestHelpful,model,notes\n";
-    if (!includeLegend) return emptyHeader;
-    const legendHeader = "metric,definition,goodThreshold,source\n";
+      "reviewId,ownerId,ownerEmail,ownerName,ownerId,ownerEmail,ownerName,repo,prNumber,createdAt,groundedness,relevance,contextRelevance,actionability,falsePositiveRisk,readability,brevity,coverage,honestHelpful,codeChurnRatio,filesChanged,reviewCoverage,suggestionDensity,model,notes\n";
+    if (!includeLegend) return "\ufeff" + emptyHeader;
+    const legendHeader = "metric,definition,range,goodThreshold,source\n";
     const legendLines = METRIC_LEGEND.map(
       (item) =>
-        `"${item.metric}","${item.definition}","${item.goodThreshold}","${item.source}"`
+        `"${item.metric}","${item.definition}","${item.range}","${item.goodThreshold}","${item.source}"`
     ).join("\n");
-    return `${emptyHeader}\n${legendHeader}${legendLines}\n`;
+    return "\ufeff" + `${emptyHeader}\n${legendHeader}${legendLines}\n`;
   }
 
   const headers = Object.keys(rows[0]);
@@ -149,15 +203,15 @@ function toCsv(
   }
 
   if (!includeLegend) {
-    return `${lines.join("\n")}\n`;
+    return "\ufeff" + `${lines.join("\n")}\n`;
   }
 
-  const legendHeader = "metric,definition,goodThreshold,source";
+  const legendHeader = "metric,definition,range,goodThreshold,source";
   const legendLines = METRIC_LEGEND.map(
     (item) =>
-      `"${item.metric}","${item.definition}","${item.goodThreshold}","${item.source}"`
+      `"${item.metric}","${item.definition}","${item.range}","${item.goodThreshold}","${item.source}"`
   );
-  return `${lines.join("\n")}\n\n${legendHeader}\n${legendLines.join("\n")}\n`;
+  return "\ufeff" + `${lines.join("\n")}\n\n${legendHeader}\n${legendLines.join("\n")}\n`;
 }
 
 export async function GET(request: NextRequest) {
@@ -166,24 +220,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Only whitelisted users can access all metrics/eval reports
+  if (!isMetricsAdmin(session)) {
+    return NextResponse.json(
+      { error: "Forbidden: Only authorized admins can access evaluation reports" },
+      { status: 403 }
+    );
+  }
+
   const format = request.nextUrl.searchParams.get("format") || "json";
   const includeLegend = request.nextUrl.searchParams.get("includeLegend") !== "0";
   const limitRaw = request.nextUrl.searchParams.get("limit") || "200";
   const limit = Math.max(1, Math.min(1000, Number(limitRaw) || 200));
 
+  // Admin can view all evaluation metrics (no userId filter)
   const events = await prisma.reviewEvent.findMany({
     where: {
       message: "Review evaluation completed",
-      review: {
-        repository: {
-          userId: session.user.id,
-        },
-      },
     },
     include: {
       review: {
         include: {
-          repository: true,
+          repository: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  name: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -201,6 +269,9 @@ export async function GET(request: NextRequest) {
       return {
         reviewId: event.reviewId,
         repo: event.review.repository.fullName,
+        ownerId: event.review.repository.user.id,
+        ownerEmail: event.review.repository.user.email,
+        ownerName: event.review.repository.user.name,
         prNumber: event.review.prNumber,
         createdAt: event.createdAt.toISOString(),
         groundedness: scores.groundedness,
