@@ -80,8 +80,13 @@ export async function getDashboardStats() {
     const totalPRs = prs.total_count
 
     // Count AI reviews generated for this user from database
+    // Reviews are linked to repositories; repositories have the userId owner.
     const totalReviews = await prisma.review.count({
-      where: { userId: session.user.id }
+      where: {
+        repository: {
+          userId: session.user.id,
+        },
+      },
     });
 
     return {
