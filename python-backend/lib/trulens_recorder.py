@@ -23,6 +23,11 @@ METRIC_NAMES = [
     "brevity",
     "coverage",
     "honestHelpful",
+    # Metadata metrics (no LLM needed)
+    "codeChurnRatio",
+    "reviewCoverage",
+    "suggestionDensity",
+    "filesChanged",
 ]
 
 METRIC_LABELS = {
@@ -35,6 +40,10 @@ METRIC_LABELS = {
     "brevity": "Brevity / Ngắn gọn",
     "coverage": "Coverage / Độ bao phủ",
     "honestHelpful": "Honest helpful / Trung thực & hữu ích",
+    "codeChurnRatio": "Code churn ratio / Tỷ lệ chỉnh sửa code",
+    "reviewCoverage": "Review coverage / Độ bao phủ review",
+    "suggestionDensity": "Suggestion density / Mật độ đề xuất",
+    "filesChanged": "Files changed / File thay đổi",
 }
 
 

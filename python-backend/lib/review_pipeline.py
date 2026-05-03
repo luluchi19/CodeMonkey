@@ -634,6 +634,9 @@ async def run_review(payload: dict[str, Any]) -> dict[str, Any]:
                 diff,
                 context,
                 review,
+                pr_additions=pr_data.get("additions"),
+                pr_deletions=pr_data.get("deletions"),
+                pr_files_changed=pr_data.get("changed_files"),
             )
             if evaluation_metrics:
                 _post_review_event(
