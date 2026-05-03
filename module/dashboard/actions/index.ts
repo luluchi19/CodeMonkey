@@ -63,7 +63,10 @@ export async function getDashboardStats() {
 
     const {data: user} = await octokit.rest.users.getAuthenticated();
 
-    const totalRepos = 30;
+    // Count connected repositories for this user from database
+    const totalRepos = await prisma.repository.count({
+      where: { userId: session.user.id }
+    });
 
     const calendar = await fetchUserContribution(token, user.login);
     const totalCommits = calendar?.totalContributions || 0
@@ -76,8 +79,10 @@ export async function getDashboardStats() {
 
     const totalPRs = prs.total_count
 
-    // TODO: COUNT AI REVIEWS FROM DATABASE
-    const totalReviews = 44
+    // Count AI reviews generated for this user from database
+    const totalReviews = await prisma.review.count({
+      where: { userId: session.user.id }
+    });
 
     return {
       totalCommits,
