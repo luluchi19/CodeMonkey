@@ -6,18 +6,22 @@
 
 ## 📌 Mục lục
 
-- [Vấn đề mình giải quyết](#vấn-đề-mình-giải-quyết)
-- [CodeMonkey hoạt động như thế nào](#codemonkey-hoạt-động-như-thế-nào)
-- [Kiến trúc hệ thống](#kiến-trúc-hệ-thống)
-- [So sánh với LAURA](#so-sánh-với-laura)
-- [AI & Code Processing](#ai--code-processing)
-- [Optional LLM Fallbacks](#optional-llm-fallbacks)
-- [Quality Assurance](#quality-assurance)
-- [Đánh giá chất lượng](#đánh-giá-chất-lượng)
-- [Hướng dẫn bắt đầu](#hướng-dẫn-bắt-đầu)
-- [Cấu hình](#cấu-hình)
-- [Dành cho sinh viên và người mới học lập trình](#dành-cho-sinh-viên-và-người-mới-học-lập-trình)
-- [Kết quả mong đợi & cách kiểm thử](#kết-quả-mong-đợi--cách-kiểm-thử)
+- [Vấn đề mình giải quyết](#-vấn-đề-mình-giải-quyết)
+- [CodeMonkey hoạt động như thế nào](#-codemonkey-hoạt-động-như-thế-nào)
+- [Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
+- [So sánh với LAURA](#-so-sánh-với-laura)
+- [AI & Code Processing](#-ai--code-processing)
+- [Đánh giá chất lượng](#-đánh-giá-chất-lượng)
+- [Hướng dẫn bắt đầu](#-hướng-dẫn-bắt-đầu)
+- [Setup Development Environment](#-setup-development-environment)
+- [Cấu hình](#-cấu-hình)
+- [Gói sử dụng](#-gói-sử-dụng)
+- [Bảo mật & quyền riêng tư](#-bảo-mật--quyền-riêng-tư)
+- [Demo](#-demo)
+- [Dành cho sinh viên và người mới học lập trình](#-dành-cho-sinh-viên-và-người-mới-học-lập-trình)
+- [Kết quả mong đợi & cách kiểm thử](#-kết-quả-mong-đợi--cách-kiểm-thử)
+- [Hỗ trợ & phản hồi](#-hỗ-trợ--phản-hồi)
+- [Giấy phép](#-giấy-phép)
 
 ---
 
@@ -243,6 +247,146 @@ Hãy chờ comment **AI CodeMonkey Review** trong khoảng 30–90 giây.
 - 🔧 Sửa các vấn đề được nêu
 - 🔄 Push commit mới, CodeMonkey sẽ review lại
 - ✅ Merge khi đã ổn
+
+---
+
+## 🛠️ Setup Development Environment
+
+### **Yêu cầu hệ thống**
+
+- **Git** — để clone repo
+- **Node.js 18+** — cho phần frontend
+- **Python 3.9+** — cho phần backend
+- **Bun** — package manager cho Node.js (thay thế npm/yarn)
+- **PostgreSQL 14+** — database
+
+### **Bước 1: Clone repository từ GitHub**
+
+1. Vào [GitHub CodeMonkey Repository](https://github.com/luluchi19/CodeMonkey)
+2. Bấm nút **Code** (xanh lá)
+3. Chọn **HTTPS** hoặc **SSH** (khuyến nghị dùng SSH nếu đã setup)
+4. Copy link
+5. Chạy lệnh:
+
+```bash
+# Clone repo
+git clone https://github.com/luluchi19/CodeMonkey.git
+
+# Vào thư mục project
+cd CodeMonkey
+```
+
+### **Bước 2: Setup Python Backend**
+
+Navigate vào thư mục Python backend và thiết lập virtual environment:
+
+```bash
+# Vào thư mục backend
+cd python-backend
+
+# Tạo virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# Trên Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+
+# Trên macOS/Linux (Bash/Zsh):
+source .venv/bin/activate
+
+# Cài đặt dependencies
+pip install -r requirements.txt
+
+# (Nếu muốn dev mode) Cài dependencies phát triển
+pip install -r requirements-dev.txt
+```
+
+Sau đó, chạy FastAPI server:
+
+```bash
+# Chạy uvicorn (development server)
+uvicorn modal_app:app --reload --host 0.0.0.0 --port 8000
+
+# Hoặc nếu dùng Modal (production):
+modal deploy modal_app.py
+```
+
+> **📝 Lưu ý:** Mặc định dev server chạy tại `http://localhost:8000`
+
+### **Bước 3: Setup Node.js Frontend**
+
+Quay lại thư mục gốc và setup frontend:
+
+```bash
+# Quay lại thư mục project root
+cd ..
+
+# Cài đặt dependencies với Bun
+bun install
+
+# Chạy development server
+bun run dev
+```
+
+> **📝 Lưu ý:** Dev server chạy tại `http://localhost:3000`
+
+### **Bước 4: Cấu hình môi trường (Environment Variables)**
+
+Tạo file `.env.local` trong thư mục gốc:
+
+```bash
+# GitHub OAuth
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# Polar (Payments)
+POLAR_ACCESS_TOKEN=your_polar_token
+POLAR_API_KEY=your_polar_api_key
+
+# Database (PostgreSQL)
+DATABASE_URL=postgresql://user:password@localhost:5432/codemonkey
+
+# Pinecone (Vector DB)
+PINCONE_API_KEY=your_pinecone_api_key
+PINCONE_INDEX_NAME=codemonkey-index
+
+# Google Gemini AI
+GEMINI_API_KEY=your_gemini_api_key
+
+# Inngest (Task Queue)
+INNGEST_EVENT_KEY=your_inngest_event_key
+INNGEST_SIGNING_KEY=your_inngest_signing_key
+```
+
+Tương tự, tạo file `.env` trong thư mục `python-backend`:
+
+```bash
+# Python backend config
+MODAL_TOKEN_ID=your_modal_token
+MODAL_TOKEN_SECRET=your_modal_secret
+
+PINCONE_API_KEY=your_pinecone_api_key
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+### **Bước 5: Kiểm tra lại setup**
+
+Sau khi setup xong, kiểm tra xem tất cả services đang chạy:
+
+| Component | URL | Status |
+|-----------|-----|--------|
+| Frontend (Next.js) | `http://localhost:3000` | ✅ |
+| Backend (FastAPI) | `http://localhost:8000` | ✅ |
+| Database | PostgreSQL connection | ✅ |
+
+Nếu tất cả đều bật, bạn đã ready để phát triển! 🎉
+
+### **Troubleshooting**
+
+- **Lỗi Python venv:** Hãy chắc bạn đã `activate` virtual environment trước khi chạy lệnh pip
+- **Lỗi Bun command not found:** Cài Bun từ https://bun.sh
+- **Port 3000/8000 đã bị dùng:** Thay port bằng `-p 3001` hoặc `--port 8001`
+- **Database connection failed:** Kiểm tra `DATABASE_URL` trong `.env.local` đúng không
 
 ---
 
