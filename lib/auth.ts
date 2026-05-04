@@ -51,7 +51,7 @@ export const auth = betterAuth({
             authenticatedUsersOnly: true
           }),
           portal({
-            returnUrl: process.env.POLAR_SUCCESS_URL || "http://localhost:3000/dashboard" // URL to return to after the customer is done in the portal
+            returnUrl: process.env.POLAR_RETURN_URL || process.env.NEXT_PUBLIC_APP_BASE_URL + "/dashboard/subscription"
           }),
           usage(),
           webhooks({
