@@ -1,6 +1,6 @@
-# Python Sidecar (CodeMonkey)
+# Python Backend (CodeMonkey)
 
-Minimal FastAPI app for the AI sidecar.
+Minimal FastAPI app for AI processing.
 
 ## Local setup
 
@@ -48,7 +48,7 @@ Optional review evaluation:
 
 ## Evaluation outputs
 
-- Python sidecar logs review evaluation scores as `Review evaluation completed` events.
+- Python backend logs review evaluation scores as `Review evaluation completed` events.
 - Export periodic report from Next.js API:
 	- JSON: `GET /api/reviews/eval-report`
 	- CSV: `GET /api/reviews/eval-report?format=csv`

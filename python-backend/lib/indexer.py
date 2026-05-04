@@ -34,6 +34,14 @@ SKIP_DIRS = {
     ".gradle",
     ".mvn",
     "bin",
+    # PHP-specific
+    "vendor",           # composer dependencies
+    "composer-lock",    # composer lock file
+    # Framework caches
+    "storage",          # Laravel cache/logs
+    "bootstrap",        # Laravel bootstrap
+    "var",              # Symfony var directory
+    "tmp",              # Temporary files
 }
 
 SKIP_FILES = {
@@ -44,6 +52,8 @@ SKIP_FILES = {
     "poetry.lock",
     "pipfile.lock",
     "pom.lock",
+    # PHP-specific
+    "composer.lock",
 }
 
 ALLOWED_EXTENSIONS = {
@@ -79,6 +89,15 @@ ALLOWED_EXTENSIONS = {
     ".xml",
     ".gradle",
     ".sh",
+    # PHP-specific
+    ".php",
+    ".php3",
+    ".php4",
+    ".php5",
+    ".phtml",
+    # PHP config/framework files
+    ".env",
+    ".blade.php",     # Laravel Blade templates
 }
 
 
