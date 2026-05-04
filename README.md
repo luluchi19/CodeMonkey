@@ -191,9 +191,6 @@ Truy cập các chỉ số qua:
 ### **Điều kiện cần**
 
 1. **GitHub Account** — repo public hoặc private
-2. **Polar Account** — có thể dùng sandbox để test
-3. **Vercel Account** — để deploy ứng dụng web
-4. **Modal Account** — để chạy phần xử lý AI
 
 ### **Bước 1: Kết nối repository**
 
