@@ -375,7 +375,7 @@ export default function SubscriptionPage() {
             </div>
 
             <Button className="w-full" variant="outline" disabled>
-              {isPro ? "Current Plan" : "Downgrade"}
+              {isPro ? "Included in Pro" : "Current Plan"}
             </Button>
           </CardContent>
         </Card>
