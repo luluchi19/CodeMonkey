@@ -6,7 +6,10 @@ import { decrementRepositoryCount } from "@/module/payment/lib/subscription";
 export { disconnectRepoVectors } from "./disconnect";
 
 export const indexRepo = inngest.createFunction(
-  { id: "index-repo" },
+  { 
+    id: "index-repo",
+    retries: 2, // Limit retries to 2 attempts (3 total: 1 initial + 2 retries)
+  },
   { event: "repository.connected" },
 
   async ({ event, step }) => {

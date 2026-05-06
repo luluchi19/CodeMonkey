@@ -3,7 +3,11 @@ import prisma from "@/lib/db";
 import { postToPythonSidecar } from "@/lib/python-sidecar";
 
 export const generateReview = inngest.createFunction(
-  {id:"generate-review", concurrency:5},
+  {
+    id:"generate-review",
+    concurrency:5,
+    retries: 2, // Limit retries to 2 attempts (3 total: 1 initial + 2 retries)
+  },
   {event:"pr.review.requested"},
 
   async ({event , step})=>{
