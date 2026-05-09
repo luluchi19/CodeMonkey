@@ -152,7 +152,7 @@ export default function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                 <BarChart data={data.weeklyReviews}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="week" />
-                  <YAxis />
+                  <YAxis allowDecimals={false} />
                   <Tooltip contentStyle={tooltipStyle} />
                   <Bar dataKey="reviews" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
                 </BarChart>

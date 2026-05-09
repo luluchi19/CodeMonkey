@@ -62,11 +62,22 @@ export function RepositoryList() {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: ["connected-repositories"] })
         queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
-        toast.success("Repository disconnected successfully")
+        toast.success("✅ Repository disconnected successfully")
       } else {
         toast.error(result?.error || "Failed to disconnect repository")
       }
     },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to disconnect repository";
+      const isServiceError = message.toLowerCase().includes("500") || message.toLowerCase().includes("modal");
+      
+      toast.error("⚠️ Disconnection failed", {
+        description: isServiceError 
+          ? "Service temporarily unavailable. Please try again in a moment."
+          : message,
+      });
+      console.error("Error disconnecting repository:", { error, message });
+    }
   })
 
   const disconnectAllMutation = useMutation({
@@ -77,12 +88,23 @@ export function RepositoryList() {
       if (result?.success) {
         queryClient.invalidateQueries({ queryKey: ["connected-repositories"] })
         queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
-        toast.success(`Disconnected ${result.count} repositories`)
+        toast.success(`✅ Disconnected ${result.count} repositories`)
         setDisconnectAllOpen(false)
       } else {
         toast.error(result?.error || "Failed to disconnect repositories")
       }
     },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to disconnect repositories";
+      const isServiceError = message.toLowerCase().includes("500") || message.toLowerCase().includes("modal");
+      
+      toast.error("⚠️ Bulk disconnection failed", {
+        description: isServiceError 
+          ? "Service temporarily unavailable. Please try again in a moment."
+          : message,
+      });
+      console.error("Error disconnecting all repositories:", { error, message });
+    }
   })
 
   if (isLoading) {

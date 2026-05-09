@@ -18,11 +18,16 @@ class PineconeClient:
             return
         self._index.upsert(vectors=records)
 
-    def query(self, vector: list[float], repo_id: str, top_k: int) -> list[dict]:
+    def query(self, vector: list[float], repo_id: str, top_k: int, path: str | None = None) -> list[dict]:
+        # Allow optional path filtering to prioritize matches from specific files
+        flt = {"repoId": repo_id}
+        if path:
+            flt["path"] = path
+
         results = self._index.query(
             vector=vector,
             top_k=top_k,
-            filter={"repoId": repo_id},
+            filter=flt,
             include_metadata=True,
         )
         return list(results.get("matches", []))

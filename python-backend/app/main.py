@@ -9,6 +9,25 @@ from lib.review_pipeline import run_review
 app = FastAPI(title="CodeMonkey Python Sidecar")
 
 
+def validate_config() -> tuple[bool, str]:
+    """
+    Validate required config before processing.
+    Returns (is_valid, error_message)
+    """
+    issues = []
+    
+    if not settings.pinecone_api_key:
+        issues.append("PINECONE_API_KEY not configured")
+    if not settings.google_api_key:
+        issues.append("GOOGLE_API_KEY not configured")
+    if not settings.embedding_model:
+        issues.append("Embedding model not specified")
+    
+    if issues:
+        return False, "; ".join(issues)
+    return True, ""
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
@@ -27,16 +46,26 @@ async def repo_index(
     if not verify_signature(body, x_cm_timestamp, x_cm_signature):
         raise HTTPException(status_code=401, detail="invalid signature")
 
+    # Pre-flight validation: check config BEFORE processing
+    is_valid, error_msg = validate_config()
+    if not is_valid:
+        print("config_validation_failed", {"endpoint": "repo-index", "error": error_msg})
+        raise HTTPException(status_code=400, detail=f"Configuration error: {error_msg}")
+
     payload = await request.json()
-    if not settings.google_api_key or not settings.pinecone_api_key:
-        raise HTTPException(status_code=500, detail="Missing embedding or Pinecone config")
 
     try:
         result = await index_repository(payload)
         return {"ok": True, "handler": "repo-index", "result": result}
     except Exception as exc:
+        error_str = str(exc)[:200]
+        print("repo_index_error", {
+            "error": error_str,
+            "type": type(exc).__name__,
+            "suggestion": "Check Modal logs, API keys, and Pinecone connection"
+        })
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"repo-index failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Indexing failed: {error_str}") from exc
 
 
 @app.post("/inngest/repo-disconnect")
@@ -52,16 +81,26 @@ async def repo_disconnect(
     if not verify_signature(body, x_cm_timestamp, x_cm_signature):
         raise HTTPException(status_code=401, detail="invalid signature")
 
+    # Pre-flight validation: check config BEFORE processing
+    is_valid, error_msg = validate_config()
+    if not is_valid:
+        print("config_validation_failed", {"endpoint": "repo-disconnect", "error": error_msg})
+        raise HTTPException(status_code=400, detail=f"Configuration error: {error_msg}")
+
     payload = await request.json()
-    if not settings.pinecone_api_key:
-        raise HTTPException(status_code=500, detail="Missing Pinecone config")
 
     try:
         result = await delete_repository_vectors(payload)
         return {"ok": True, "handler": "repo-disconnect", "result": result}
     except Exception as exc:
+        error_str = str(exc)[:200]
+        print("repo_disconnect_error", {
+            "error": error_str,
+            "type": type(exc).__name__,
+            "suggestion": "Check Pinecone connection"
+        })
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"repo-disconnect failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Disconnection failed: {error_str}") from exc
 
 
 @app.post("/inngest/pr-review")
@@ -77,13 +116,23 @@ async def pr_review(
     if not verify_signature(body, x_cm_timestamp, x_cm_signature):
         raise HTTPException(status_code=401, detail="invalid signature")
 
+    # Pre-flight validation: check config BEFORE processing
+    is_valid, error_msg = validate_config()
+    if not is_valid:
+        print("config_validation_failed", {"endpoint": "pr-review", "error": error_msg})
+        raise HTTPException(status_code=400, detail=f"Configuration error: {error_msg}")
+
     payload = await request.json()
-    if not settings.google_api_key or not settings.pinecone_api_key:
-        raise HTTPException(status_code=500, detail="Missing embedding or Pinecone config")
 
     try:
         result = await run_review(payload)
         return {"ok": True, "handler": "pr-review", "result": result}
     except Exception as exc:
+        error_str = str(exc)[:200]
+        print("pr_review_error", {
+            "error": error_str,
+            "type": type(exc).__name__,
+            "suggestion": "Check Modal logs, API keys (GOOGLE_API_KEY), and Pinecone connection"
+        })
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"pr-review failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Review generation failed: {error_str}") from exc

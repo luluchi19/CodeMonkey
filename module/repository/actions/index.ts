@@ -140,19 +140,27 @@ export const connectRepository = async (owner: string, repo: string, githubId: n
       },
     });
   } catch (error) {
-    console.error("Failed to trigger repository indexing:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Failed to trigger repository indexing:", {
+      repo: `${owner}/${repo}`,
+      error: errorMsg,
+      timestamp: new Date().toISOString(),
+    });
 
     await prisma.repository.update({
       where: { id: repositoryRecord.id },
       data: {
         disconnectedAt: new Date(),
         indexStatus: "ready",
-        indexMessage: "Disconnected: failed to queue indexing. Please reconnect and try again.",
+        indexMessage: "❌ Failed to queue indexing. Please reconnect and try again.",
       },
     });
     await decrementRepositoryCount(session.user.id, 1);
 
-    throw new Error("Failed to start indexing. Repository has been reset to disconnected state.");
+    throw new Error(
+      "Failed to start indexing. Please check your connection and try again. " +
+      "If the problem persists, contact support."
+    );
   }
 
   return { ok: true, queued: true };

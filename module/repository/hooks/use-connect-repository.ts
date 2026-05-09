@@ -15,15 +15,27 @@ export const useConnectRepository = () => {
       return await connectRepository(owner , repo , githubId)
     },
     onSuccess:()=>{
-      toast.success("Repository connected successfully"),
+      toast.success("✅ Repository connected successfully! Indexing in progress...");
       queryClient.invalidateQueries({queryKey:["repositories"]})
     },
     onError:(error)=>{
       const message = error instanceof Error ? error.message : "Failed to connect repository";
       const shouldUpgrade = message.toLowerCase().includes("upgrade") || message.toLowerCase().includes("limit");
+      const isConfigError = message.toLowerCase().includes("config") || message.toLowerCase().includes("key");
+      const isServiceError = message.toLowerCase().includes("500") || message.toLowerCase().includes("modal") || message.toLowerCase().includes("service");
 
-      toast.error("Failed to connect repository", {
-        description: message,
+      // Provide context-specific error messages
+      let description = message;
+      if (shouldUpgrade) {
+        description = "You've reached your connection limit. Upgrade to PRO to add more repositories.";
+      } else if (isConfigError) {
+        description = "Configuration issue detected. Check your API keys and try again.";
+      } else if (isServiceError) {
+        description = "AI indexing service is temporarily unavailable. Please try clicking 'Connect' again in 1 minute.";
+      }
+
+      toast.error("⚠️ Connection failed", {
+        description,
         action: shouldUpgrade
           ? {
               label: "Upgrade",
@@ -31,7 +43,7 @@ export const useConnectRepository = () => {
             }
           : undefined,
       })
-      console.error("Error connecting repository:", error)
+      console.error("Error connecting repository:", { error, message, context: { shouldUpgrade, isConfigError, isServiceError } })
     }
   })
 

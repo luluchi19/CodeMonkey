@@ -82,6 +82,25 @@ export const indexRepo = inngest.createFunction(
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Repository indexing failed";
+      
+      // Detailed error logging for debugging
+      const errorContext = {
+        repo: `${owner}/${repo}`,
+        userId,
+        error: message,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        timestamp: new Date().toISOString(),
+        suggestion: message.includes("config") 
+          ? "Check API keys (GOOGLE_API_KEY, PINECONE_API_KEY) in Modal env vars"
+          : message.includes("timeout")
+          ? "Modal service is slow or unreachable. Check Modal status page."
+          : message.includes("401") || message.includes("signature")
+          ? "Authentication failed. Check Python sidecar secret."
+          : "Check Modal logs for details. Service may be overloaded or API quota exceeded.",
+      };
+      
+      console.error("❌ REPO INDEXING FAILED:", errorContext);
+      
       await markDisconnectedAfterFailure(message);
       throw error;
     }

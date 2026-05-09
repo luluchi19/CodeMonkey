@@ -61,6 +61,16 @@ REVIEW_EVAL_MODEL = "models/gemini-2.5-flash-lite"
 
 
 def _build_review_eval_prompt(review_text: str) -> str:
+    # Require a short, evidence-aware reasoning trace before the final review so reviewers
+    # can audit grounding. Keep this lightweight: analysis -> evidence -> decision -> final_review.
+    cot_instructions = (
+        "Before the final review, provide a short structured trace (for auditing):\n"
+        "1) Analysis: brief step-by-step reasoning (1-5 bullets).\n"
+        "2) Evidence: list file paths and short excerpts or blob links supporting each claim.\n"
+        "3) Decision: final judgment about severity/actions.\n"
+        "4) Final Review: the cleaned review text to post (obey formatting rules below).\n\n"
+    )
+
     return (
         "You are a senior code review editor. Improve the AI review for accuracy and usefulness.\n"
         "Remove hallucinations, fix unclear claims, and keep the same structure/sections.\n"
@@ -166,6 +176,7 @@ def _build_prompt(
         "Be thorough and specific. Provide actionable feedback with concrete examples.\n"
         "Use LAURA-style guidance: focus on logic, security, and performance.\n"
         "Reduce false positives by grounding claims in the provided context/diff.\n\n"
+        f"{cot_instructions}"
         f"{language_line}\n\n"
         f"Repository URL: {repo_url}\n"
         f"PR URL: {pr_url}\n"
@@ -419,8 +430,10 @@ async def run_review(payload: dict[str, Any]) -> dict[str, Any]:
         )
 
         references = collect_references([title, description, diff])
+        files = _extract_diff_files(diff)
+        # Pass changed file list to retriever so it can prioritize file-local context
         context, context_warning = retrieve_context(
-            f"{title}\n{description}", f"{owner}/{repo}"
+            f"{title}\n{description}", f"{owner}/{repo}", files if files else None
         )
         context, input_tokens = _trim_context_to_budget(
             owner,
