@@ -5,6 +5,7 @@ from app.config import settings
 from app.security import verify_signature
 from lib.indexer import delete_repository_vectors, index_repository
 from lib.review_pipeline import run_review
+from lib.rag_flow_inspector import inspect_rag_flow
 
 app = FastAPI(title="CodeMonkey Python Sidecar")
 
@@ -136,3 +137,44 @@ async def pr_review(
         })
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Review generation failed: {error_str}") from exc
+
+
+@app.post("/eval/rag-flow")
+async def eval_rag_flow(request: Request) -> dict:
+    """
+    Công khai endpoint để inspect RAG pipeline flow chi tiết
+    Không cần signature verification vì chỉ inspect, không modify data
+    """
+    try:
+        payload = await request.json()
+        
+        # Validate required fields
+        repo_id = payload.get("repo_id")
+        owner = payload.get("owner")
+        repo = payload.get("repo")
+        pr_number = payload.get("pr_number")
+        file_filter = payload.get("file_filter")  # Optional
+        
+        if not all([repo_id, owner, repo, pr_number]):
+            raise HTTPException(
+                status_code=400,
+                detail="Missing required fields: repo_id, owner, repo, pr_number"
+            )
+        
+        # Call the inspector
+        result = await inspect_rag_flow(repo_id, owner, repo, pr_number, file_filter)
+        return {"ok": True, "handler": "eval/rag-flow", "data": result}
+        
+    except HTTPException:
+        raise
+    except Exception as exc:
+        error_str = str(exc)[:200]
+        print("rag_flow_inspection_error", {
+            "error": error_str,
+            "type": type(exc).__name__
+        })
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"RAG flow inspection failed: {error_str}"
+        ) from exc
