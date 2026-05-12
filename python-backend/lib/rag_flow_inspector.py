@@ -102,7 +102,7 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
                 "pr_description": pr_data.get("body", ""),
                 "diff_lines": diff_lines,
                 "diff_chars": len(pr_diff),
-                "files_changed": len(pr_data.get("changed_files", 0))
+                "files_changed": pr_data.get("changed_files", 0)
             },
             metrics={
                 "duration_ms": phase_duration,
@@ -209,13 +209,13 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
         
         # Embed query (PR title + description)
         query = f"{pr_data.get('title', '')} {pr_data.get('body', '')}"
-        query_vector = await embed_text(query)
+        query_vector = embed_text(query)
         
         # Embed first 5 chunks for demo
         chunk_vectors = []
         for chunk in all_chunks[:5]:
             try:
-                vec = await embed_text(chunk["content"][:200])  # Limit to 200 chars for perf
+                vec = embed_text(chunk["content"][:200])  # Limit to 200 chars for perf
                 chunk_vectors.append({
                     "chunk_id": chunk["id"],
                     "vector_dim": len(vec) if vec else 0,

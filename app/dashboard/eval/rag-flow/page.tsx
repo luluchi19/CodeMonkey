@@ -88,12 +88,19 @@ export default function RAGFlowPage() {
     URL.revokeObjectURL(url);
   };
 
+  const maxDuration = data?.phases.reduce(
+    (max, phase) => Math.max(max, phase.duration_ms),
+    0
+  ) || 0;
+
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto">
+    <div className="space-y-6 p-6 max-w-7xl mx-auto bg-background text-foreground">
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold">RAG Flow Inspector</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">
+          RAG Flow Inspector
+        </h1>
+        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
           Inspect chi tiết từng bước của RAG pipeline: từ chunking → embedding → retrieval → LLM → evaluation
         </p>
       </div>
@@ -101,13 +108,15 @@ export default function RAGFlowPage() {
       {/* Input Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Input Parameters</CardTitle>
-          <CardDescription>Nhập thông tin repo và PR để analyze</CardDescription>
+          <CardTitle className="text-foreground">Input Parameters</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Nhập thông tin repo và PR để analyze
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Repo ID (Database)</label>
+              <label className="text-sm font-medium text-foreground">Repo ID (Database)</label>
               <Input
                 placeholder="e.g. abc123"
                 value={repoId}
@@ -115,7 +124,7 @@ export default function RAGFlowPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Owner</label>
+              <label className="text-sm font-medium text-foreground">Owner</label>
               <Input
                 placeholder="e.g. torvalds"
                 value={owner}
@@ -123,7 +132,7 @@ export default function RAGFlowPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Repo</label>
+              <label className="text-sm font-medium text-foreground">Repo</label>
               <Input
                 placeholder="e.g. linux"
                 value={repo}
@@ -131,7 +140,7 @@ export default function RAGFlowPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">PR Number</label>
+              <label className="text-sm font-medium text-foreground">PR Number</label>
               <Input
                 placeholder="e.g. 42"
                 type="number"
@@ -196,25 +205,25 @@ export default function RAGFlowPage() {
       {data && (
         <div className="space-y-4">
           {/* Summary */}
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className="border-border/60 bg-muted/30 text-foreground shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg">Pipeline Summary</CardTitle>
+              <CardTitle className="text-lg text-foreground">Pipeline Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Total Duration</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-sm font-medium text-muted-foreground">Total Duration</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {(data.summary.total_duration_ms / 1000).toFixed(2)}s
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Phases</p>
-                  <p className="text-2xl font-bold">{data.summary.phase_count}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Phases</p>
+                  <p className="text-2xl font-bold text-foreground">{data.summary.phase_count}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Timestamp</p>
-                  <p className="text-sm font-mono">
+                  <p className="text-sm font-medium text-muted-foreground">Timestamp</p>
+                  <p className="text-sm font-mono text-foreground/90">
                     {new Date(data.summary.timestamp).toLocaleString()}
                   </p>
                 </div>
@@ -225,26 +234,31 @@ export default function RAGFlowPage() {
           {/* Timeline Visualization */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Pipeline Timeline</CardTitle>
+              <CardTitle className="text-lg text-foreground">Pipeline Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {data.phases.map((phase, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <Badge variant="secondary" className="w-24 justify-center">
-                      {(phase.duration_ms).toFixed(0)}ms
-                    </Badge>
-                    <div className="flex-1">
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                        {phase.name}
+                      </p>
+                      <Badge variant="secondary" className="shrink-0 w-24 justify-center">
+                        {phase.duration_ms.toFixed(0)}ms
+                      </Badge>
+                    </div>
+                    <div className="h-8 overflow-hidden rounded-full bg-muted/70 border border-border/60">
                       <div
-                        className="h-8 bg-linear-to-r from-blue-400 to-purple-400 rounded text-white text-xs flex items-center px-3 font-medium"
+                        className="flex h-full items-center rounded-full bg-linear-to-r from-blue-500 to-purple-500 px-3 text-xs font-medium text-white shadow-sm"
                         style={{
                           width: `${Math.max(
-                            (phase.duration_ms / data.summary.total_duration_ms) * 100,
-                            5
+                            maxDuration > 0 ? (phase.duration_ms / maxDuration) * 100 : 0,
+                            10
                           )}%`,
                         }}
                       >
-                        {phase.name}
+                        <span className="truncate whitespace-nowrap">{phase.name}</span>
                       </div>
                     </div>
                   </div>
@@ -269,8 +283,8 @@ export default function RAGFlowPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle>{phase.name}</CardTitle>
-                        <CardDescription className="mt-2 text-base">
+                        <CardTitle className="text-foreground">{phase.name}</CardTitle>
+                        <CardDescription className="mt-2 text-base text-muted-foreground">
                           {phase.description}
                         </CardDescription>
                       </div>
@@ -283,8 +297,8 @@ export default function RAGFlowPage() {
                   <CardContent className="space-y-6">
                     {/* Input */}
                     <div>
-                      <h4 className="font-semibold mb-2 text-sm">Input</h4>
-                      <div className="bg-muted p-4 rounded text-sm space-y-1 max-h-48 overflow-y-auto">
+                      <h4 className="mb-2 text-sm font-semibold text-foreground">Input</h4>
+                      <div className="max-h-48 space-y-1 overflow-y-auto rounded bg-muted p-4 text-sm text-foreground">
                         {Object.entries(phase.input).map(([key, value]) => (
                           <div key={key} className="flex justify-between">
                             <span className="font-mono text-muted-foreground">{key}:</span>
@@ -300,8 +314,8 @@ export default function RAGFlowPage() {
 
                     {/* Output */}
                     <div>
-                      <h4 className="font-semibold mb-2 text-sm">Output</h4>
-                      <div className="bg-muted p-4 rounded text-sm space-y-2 max-h-96 overflow-y-auto">
+                      <h4 className="mb-2 text-sm font-semibold text-foreground">Output</h4>
+                      <div className="max-h-96 space-y-2 overflow-y-auto rounded bg-muted p-4 text-sm text-foreground">
                         {Object.entries(phase.output).map(([key, value]) => {
                           // Special handling for arrays and large objects
                           if (Array.isArray(value) && value.length > 0) {
@@ -352,8 +366,8 @@ export default function RAGFlowPage() {
 
                     {/* Metrics */}
                     <div>
-                      <h4 className="font-semibold mb-2 text-sm">Metrics</h4>
-                      <div className="bg-muted p-4 rounded text-sm space-y-1">
+                      <h4 className="mb-2 text-sm font-semibold text-foreground">Metrics</h4>
+                      <div className="space-y-1 rounded bg-muted p-4 text-sm text-foreground">
                         {Object.entries(phase.metrics).map(([key, value]) => (
                           <div key={key} className="flex justify-between">
                             <span className="font-mono text-muted-foreground">{key}:</span>
