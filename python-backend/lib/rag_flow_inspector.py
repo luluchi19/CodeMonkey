@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import time
 import json
+import os
 from typing import Any
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -79,8 +80,12 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
     try:
         # ============ PHASE 1: Get PR Data ============
         phase_start = time.time()
-        pr_data = await get_pull_request_data(owner, repo, pr_number)
-        pr_diff = await get_pull_request_diff(owner, repo, pr_number)
+        token = os.getenv("GITHUB_TOKEN") or os.getenv("GITHUB_APP_TOKEN")
+        if not token:
+            raise ValueError("Missing GITHUB_TOKEN (or GITHUB_APP_TOKEN) for GitHub API calls")
+
+        pr_data = get_pull_request_data(token, owner, repo, pr_number)
+        pr_diff = get_pull_request_diff(token, owner, repo, pr_number)
         diff_lines = len(pr_diff.splitlines())
         
         phase_duration = (time.time() - phase_start) * 1000
@@ -130,7 +135,9 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
             from .github_client import get_file_content
             for file_path in (file_filter or []):
                 try:
-                    content = await get_file_content(owner, repo, file_path)
+                    content = get_file_content(token, owner, repo, file_path)
+                    if not content:
+                        continue
                     ts_chunks = chunk_with_tree_sitter(file_path, content, max_symbols=3)
                     tree_sitter_chunks.extend([
                         {
