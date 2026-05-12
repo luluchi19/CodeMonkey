@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     genai_model: str = "models/gemini-2.5-flash"
     deepseek_api_key: str = ""
     deepseek_model: str = "deepseek-v4-flash"
+    github_token: str = ""
     openrouter_api_key: str = ""
     openrouter_model: str = "qwen/qwen-2.5-7b-instruct"
     nvidia_nim_api_key: str = ""
