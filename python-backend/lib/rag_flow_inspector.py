@@ -76,6 +76,9 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
         Dict chứa tất cả phases + metrics
     """
     inspector = RAGFlowInspector()
+    # Convert database UUID to owner/repo format for Pinecone queries
+    # Pinecone stores vectors with repoId metadata in "owner/repo" format, not UUID
+    pinecone_repo_id = f"{owner}/{repo}"
     
     try:
         # ============ PHASE 1: Get PR Data ============
@@ -85,7 +88,7 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
             raise ValueError("Missing GITHUB_TOKEN (or GITHUB_APP_TOKEN) for GitHub API calls")
 
         pr_data = get_pull_request_data(token, owner, repo, pr_number)
-        pr_diff = get_pull_request_diff(token, owner, repo, pr_number)
+        pr_diff = get_pull_request_diff(token, owner, repo, pr_number) or ""
         diff_lines = len(pr_diff.splitlines())
         
         phase_duration = (time.time() - phase_start) * 1000
@@ -98,11 +101,11 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
                 "pr_number": pr_number
             },
             output_data={
-                "pr_title": pr_data.get("title", ""),
-                "pr_description": pr_data.get("body", ""),
+                "pr_title": pr_data.get("title") or "",
+                "pr_description": pr_data.get("body") or "",
                 "diff_lines": diff_lines,
                 "diff_chars": len(pr_diff),
-                "files_changed": pr_data.get("changed_files", 0)
+                "files_changed": pr_data.get("changed_files") or 0
             },
             metrics={
                 "duration_ms": phase_duration,
@@ -110,6 +113,47 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
             },
             duration_ms=phase_duration
         )
+
+        def _extract_diff_files(diff_text: str) -> list[str]:
+            files: list[str] = []
+            for line in diff_text.splitlines():
+                if line.startswith("diff --git "):
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        path = parts[2].replace("a/", "", 1)
+                        if path not in files:
+                            files.append(path)
+            return files
+
+        def _build_retrieval_queries(
+            title: str,
+            body: str,
+            diff_text: str,
+            file_paths: list[str],
+        ) -> list[tuple[str, str]]:
+            queries: list[tuple[str, str]] = []
+            # Safely handle None values by converting to empty strings
+            title = title or ""
+            body = body or ""
+            diff_text = diff_text or ""
+            
+            diff_excerpt = diff_text[:2000].strip()
+            metadata_text = " ".join(
+                part for part in [title.strip(), body.strip()] if part
+            ).strip()
+            file_text = ", ".join(file_paths[:10]).strip()
+
+            if diff_excerpt:
+                queries.append(("diff_excerpt", diff_excerpt))
+
+            metadata_parts = [part for part in [metadata_text, file_text] if part]
+            if metadata_parts:
+                queries.append(("metadata", "\n".join(metadata_parts)))
+
+            if not queries:
+                queries.append(("fallback", f"{title} {body}".strip()))
+
+            return queries
         
         # ============ PHASE 2: Chunking ============
         phase_start = time.time()
@@ -121,14 +165,7 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
         tree_sitter_chunks = []
         if not file_filter:
             # Parse file paths từ diff nếu không có filter
-            file_list = []
-            for line in pr_diff.splitlines():
-                if line.startswith("diff --git "):
-                    parts = line.split()
-                    if len(parts) >= 4:
-                        path = parts[2].replace("a/", "", 1)
-                        file_list.append(path)
-            file_filter = file_list[:5]  # Limit to 5 files for perf
+            file_filter = _extract_diff_files(pr_diff)[:5]  # Limit to 5 files for perf
         
         # Attempt tree-sitter chunking
         try:
@@ -207,8 +244,10 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
         # ============ PHASE 3: Embedding ============
         phase_start = time.time()
         
-        # Embed query (PR title + description)
-        query = f"{pr_data.get('title', '')} {pr_data.get('body', '')}"
+        # Embed primary query from diff, because code changes carry stronger signal than title/body.
+        # Fall back to title/body if diff is empty.
+        diff_excerpt = (pr_diff or "")[:2000].strip()
+        query = diff_excerpt or f"{pr_data.get('title') or ''} {pr_data.get('body') or ''}"
         query_vector = embed_text(query)
         
         # Embed first 5 chunks for demo
@@ -231,6 +270,7 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
             description="Chuyển đổi text thành vector numbers để tìm kiếm. Sử dụng text-embedding-3-small",
             input_data={
                 "query": query[:100] + "..." if len(query) > 100 else query,
+                "query_source": "diff_excerpt" if diff_excerpt else "title_body",
                 "chunks_to_embed": min(5, len(all_chunks))
             },
             output_data={
@@ -251,23 +291,91 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
         phase_start = time.time()
         
         retrieved_chunks = []
+        retrieval_attempts: list[dict[str, Any]] = []
+        retrieval_error = None
         try:
             pinecone_client = PineconeClient()
-            matches = pinecone_client.query(query_vector, repo_id, top_k=5)
-            
-            for i, match in enumerate(matches):
-                metadata = match.get("metadata") or {}
-                retrieved_chunks.append({
-                    "rank": i + 1,
-                    "chunk_id": match.get("id", ""),
-                    "similarity_score": match.get("score", 0),
-                    "source_file": metadata.get("file", ""),
-                    "content_preview": metadata.get("content", "")[:100] + "..." if metadata.get("content") else ""
-                })
+
+            retrieval_queries = _build_retrieval_queries(
+                pr_data.get("title") or "",
+                pr_data.get("body") or "",
+                pr_diff or "",
+                file_filter or [],
+            )
+            print(f"retrieval_queries_built", {"count": len(retrieval_queries), "repo_id": pinecone_repo_id})
+
+            seen_chunk_ids: set[str] = set()
+            for query_name, query_text in retrieval_queries:
+                if not query_text.strip():
+                    print(f"skipping_empty_query", {"query_name": query_name})
+                    continue
+
+                try:
+                    query_vec = embed_text(query_text)
+                    # Use pinecone_repo_id (owner/repo format) instead of database UUID
+                    matches = pinecone_client.query(query_vec, pinecone_repo_id, top_k=5)
+                    retrieval_attempts.append(
+                        {
+                            "query_name": query_name,
+                            "query_preview": query_text[:120] + "..." if len(query_text) > 120 else query_text,
+                            "matches": len(matches),
+                        }
+                    )
+                    print(f"pinecone_query_result", {"query_name": query_name, "matches": len(matches)})
+
+                    for match in matches:
+                        chunk_id = match.get("id", "")
+                        if not chunk_id or chunk_id in seen_chunk_ids:
+                            continue
+
+                        metadata = match.get("metadata") or {}
+                        retrieved_chunks.append(
+                            {
+                                "rank": len(retrieved_chunks) + 1,
+                                "chunk_id": chunk_id,
+                                "similarity_score": match.get("score", 0),
+                                "score_tooltip": "Cosine similarity (0-1, higher is closer)",
+                                "source_file": metadata.get("file", ""),
+                                "content_preview": metadata.get("content", "")[:100] + "..." if metadata.get("content") else "",
+                            }
+                        )
+                        seen_chunk_ids.add(chunk_id)
+
+                    if retrieved_chunks:
+                        break
+                except Exception as query_error:
+                    print(f"pinecone_query_failed", {"query_name": query_name, "error": str(query_error)})
+                    retrieval_error = query_error
+                    
         except Exception as e:
             print(f"pinecone_retrieval_failed", {"error": str(e)})
+            retrieval_error = e
         
         phase_duration = (time.time() - phase_start) * 1000
+        
+        # Build output_data and metrics, only including error fields if error actually occurred
+        output_data = {
+            "total_vectors_in_db": 1500,  # Example, would be actual count
+            "vectors_searched": 1500,
+            "retrieved_count": len(retrieved_chunks),
+            "top_score": retrieved_chunks[0]["similarity_score"] if retrieved_chunks else 0,
+            "score_scale": "0-1 (cosine similarity, higher is closer)",
+            "ui_hints": {
+                "similarity_score": "Hover: cosine similarity (0-1, higher is closer)",
+            },
+            "retrieved_chunks": retrieved_chunks,
+        }
+        if retrieval_error:
+            output_data["error"] = str(retrieval_error)
+        
+        metrics = {
+            "duration_ms": phase_duration,
+            "vector_db": "Pinecone",
+            "namespace": pinecone_repo_id,
+            "retrieval_attempts": len(retrieval_attempts),
+        }
+        if retrieval_error:
+            metrics["retrieval_error"] = str(retrieval_error)
         
         inspector.log_phase(
             name="Pinecone Retrieval (Vector Search)",
@@ -275,20 +383,10 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
             input_data={
                 "query_vector_dim": len(query_vector) if query_vector else 0,
                 "top_k": 5,
-                "namespace": repo_id
+                "namespace": pinecone_repo_id
             },
-            output_data={
-                "total_vectors_in_db": 1500,  # Example, would be actual count
-                "vectors_searched": 1500,
-                "retrieved_count": len(retrieved_chunks),
-                "top_score": retrieved_chunks[0]["similarity_score"] if retrieved_chunks else 0,
-                "retrieved_chunks": retrieved_chunks
-            },
-            metrics={
-                "duration_ms": phase_duration,
-                "vector_db": "Pinecone",
-                "namespace": repo_id
-            },
+            output_data=output_data,
+            metrics=metrics,
             duration_ms=phase_duration
         )
         
@@ -296,6 +394,10 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
         phase_start = time.time()
         
         context_block = "\n\n".join([c["content_preview"] for c in retrieved_chunks[:3]])
+        if not context_block:
+            context_block = "\n\n".join(chunk["content"][:200] for chunk in all_chunks[:3])
+        if not context_block:
+            context_block = pr_diff[:2000]
         diff_block = pr_diff[:2000]
         
         system_prompt = (
@@ -308,7 +410,7 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
         user_prompt = (
             f"Repository: {owner}/{repo}\n"
             f"PR #: {pr_number}\n"
-            f"PR Title: {pr_data.get('title', '')}\n\n"
+            f"PR Title: {pr_data.get('title') or ''}\n\n"
             f"Context from Codebase:\n{context_block}\n\n"
             f"Code Changes:\n```diff\n{diff_block}\n```\n\n"
             "Please provide: Walkthrough, Summary, Strengths, Issues, Suggestions, Tests, References, Risk Score"
@@ -320,7 +422,7 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
             name="LLM Prompt Building",
             description="Xây dựng prompt cho AI bằng cách combine system message + context + code diff",
             input_data={
-                "pr_title": pr_data.get('title', ''),
+                "pr_title": pr_data.get('title') or '',
                 "context_sources": len(retrieved_chunks),
                 "diff_chars": len(pr_diff),
                 "sections_requested": 8
