@@ -318,6 +318,46 @@ export default function RAGFlowPage() {
                       <div className="max-h-96 space-y-2 overflow-y-auto rounded bg-muted p-4 text-sm text-foreground">
                         {Object.entries(phase.output).map(([key, value]) => {
                           // Special handling for arrays and large objects
+                          if (key === "retrieved_chunks" && Array.isArray(value)) {
+                            return (
+                              <div key={key} className="border-t pt-2 first:border-t-0 first:pt-0">
+                                <div className="font-mono font-semibold text-foreground">{key}:</div>
+                                <div className="pl-4 mt-1 space-y-2">
+                                  {value.map((item, i) => (
+                                    <div
+                                      key={i}
+                                      className="bg-background p-2 rounded border text-xs space-y-1"
+                                    >
+                                      {Object.entries(item as Record<string, unknown>).map(([itemKey, itemValue]) => {
+                                        const tooltip =
+                                          itemKey === "similarity_score"
+                                            ? (item as Record<string, unknown>).score_tooltip
+                                            : itemKey === "metadata_preview"
+                                            ? "Metadata preview (repoId, path, chunkIndex)"
+                                            : undefined;
+
+                                        return (
+                                          <div
+                                            key={itemKey}
+                                            className="flex justify-between"
+                                            title={typeof tooltip === "string" ? tooltip : undefined}
+                                          >
+                                            <span className="font-mono text-muted-foreground">{itemKey}:</span>
+                                            <span className="font-mono text-right flex-1 ml-4">
+                                              {typeof itemValue === "object"
+                                                ? JSON.stringify(itemValue)
+                                                : String(itemValue)}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+
                           if (Array.isArray(value) && value.length > 0) {
                             return (
                               <div key={key} className="border-t pt-2 first:border-t-0 first:pt-0">

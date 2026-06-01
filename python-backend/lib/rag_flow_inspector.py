@@ -207,15 +207,23 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
         
         phase_duration = (time.time() - phase_start) * 1000
         
-        # Prepare chunk details for output (limit to first 10 để không quá nặng)
+        # Prepare chunk details for output (limit to 10, ưu tiên symbol để thấy tree-sitter)
+        symbol_chunks = [chunk for chunk in all_chunks if chunk.get("type") == "symbol"]
+        other_chunks = [chunk for chunk in all_chunks if chunk.get("type") != "symbol"]
+        display_chunks = (symbol_chunks + other_chunks)[:10]
+
         chunk_details = []
-        for chunk in all_chunks[:10]:
-            chunk_details.append({
+        for chunk in display_chunks:
+            detail = {
                 "id": chunk["id"],
                 "type": chunk["type"],
                 "size": chunk["size"],
-                "preview": chunk["content"][:150] + "..." if len(chunk["content"]) > 150 else chunk["content"]
-            })
+                "preview": chunk["content"][:150] + "..." if len(chunk["content"]) > 150 else chunk["content"],
+            }
+            if chunk.get("type") == "symbol":
+                detail["file"] = chunk.get("file", "")
+                detail["symbol"] = chunk.get("symbol", "")
+            chunk_details.append(detail)
         
         inspector.log_phase(
             name="Chunking (Tree-sitter + Text)",
@@ -335,7 +343,12 @@ async def inspect_rag_flow(repo_id: str, owner: str, repo: str, pr_number: int, 
                                 "chunk_id": chunk_id,
                                 "similarity_score": match.get("score", 0),
                                 "score_tooltip": "Cosine similarity (0-1, higher is closer)",
-                                "source_file": metadata.get("file", ""),
+                                "source_file": metadata.get("path", "") or metadata.get("file", ""),
+                                "metadata_preview": {
+                                    "repoId": metadata.get("repoId", ""),
+                                    "path": metadata.get("path", "") or metadata.get("file", ""),
+                                    "chunkIndex": metadata.get("chunkIndex", None),
+                                },
                                 "content_preview": metadata.get("content", "")[:100] + "..." if metadata.get("content") else "",
                             }
                         )
