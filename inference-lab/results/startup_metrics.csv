@@ -1,0 +1,3 @@
+quantization,model_load_gib,available_kv_cache_gib,kv_cache_tokens,max_concurrency_32768,source
+bf16,14.29,23.88,447072,13.64,Modal L40S vLLM 0.32 startup log 2026-10-26
+fp8,8.17,29.68,555760,16.96,Modal L40S vLLM 0.32 startup log 2026-10-26

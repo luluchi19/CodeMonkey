@@ -175,7 +175,7 @@ function parseScores(meta: unknown): EvalScores | null {
 }
 
 function toCsv(
-  rows: Array<Record<string, string | number>>,
+  rows: Array<Record<string, string | number | null>>,
   includeLegend: boolean
 ): string {
   if (rows.length === 0) {
@@ -191,7 +191,7 @@ function toCsv(
   }
 
   const headers = Object.keys(rows[0]);
-  const escaped = (value: string | number): string => {
+  const escaped = (value: string | number | null): string => {
     const text = String(value ?? "");
     const safe = text.replace(/"/g, '""');
     return `"${safe}"`;
@@ -285,6 +285,12 @@ export async function GET(request: NextRequest) {
         honestHelpful: scores.honestHelpful,
         model: scores.model,
         notes: scores.notes,
+        codeChurnRatio: scores.codeChurnRatio ?? null,
+        reviewCoverage: scores.reviewCoverage ?? null,
+        suggestionDensity: scores.suggestionDensity ?? null,
+        filesChanged: scores.filesChanged ?? null,
+        reasoning: scores.reasoning ?? null,
+        keyIssuesMissed: scores.keyIssuesMissed ?? null,
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);

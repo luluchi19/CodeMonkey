@@ -186,7 +186,11 @@ def evaluate_review_metrics(
         metadata["reviewCoverage"] = review_coverage
         
         # suggestionDensity: #suggestions per PR size (higher density on small PRs is good)
-        suggestion_count = review_text.count("suggest") + review_text.count("should") + review_text.count("consider")
+        suggestion_count = (review_text.lower().count("suggest") + review_text.lower().count("should") + review_text.lower().count("consider") + review_text.lower().count("recommend") + review_text.lower().count("might want to")) or (
+            review_text.lower().count("nên")
+            + review_text.lower().count("đề nghị")
+            + review_text.lower().count("cân nhắc")
+        )
         suggestion_density = round(suggestion_count / max(churn / 10, 1), 2)  # normalize per 10-line chunk
         metadata["suggestionDensity"] = suggestion_density
 

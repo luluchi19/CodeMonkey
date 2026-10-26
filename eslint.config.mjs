@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "python-backend/.venv/**",
+    "python-backend/.trulens/**",
+    "notebooks/**",
+    "inference-lab/results/**",
   ]),
 ]);
 

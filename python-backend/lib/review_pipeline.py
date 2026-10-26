@@ -15,6 +15,7 @@ from .github_client import get_pull_request_data, get_pull_request_diff, post_re
 from .citations import collect_references
 from .retriever import retrieve_context
 from .llm import generate_text
+from .agent import run_review_agent
 from .review_evaluator import evaluate_review_metrics
 from .trulens_recorder import record_trulens_review
 
@@ -106,8 +107,6 @@ def _normalize_review_sections(raw: Any) -> list[str]:
     normalized = [item for item in raw if isinstance(item, str)]
     selected = [key for key in SECTION_ORDER if key in normalized]
     return selected or list(SECTION_ORDER)
-
-
 
 
 def _build_prompt(
@@ -564,6 +563,7 @@ async def run_review(payload: dict[str, Any]) -> dict[str, Any]:
         selected_model: str | None = None
         audit_provider: str | None = None
         audit_model: str | None = None
+        agent_tool_calls: list[dict[str, Any]] = []
 
         def _success_logger(source: str, model: str) -> None:
             nonlocal selected_provider, selected_model
@@ -587,11 +587,45 @@ async def run_review(payload: dict[str, Any]) -> dict[str, Any]:
                 {"provider": source, "model": model, "elapsedMs": elapsed_ms()},
             )
 
-        review = generate_text(
-            prompt,
-            on_fallback=_fallback_logger,
-            on_success=_success_logger,
-        )
+        if settings.langgraph_enabled:
+            agent_result = run_review_agent(
+                prompt=prompt,
+                owner=owner,
+                repo=repo,
+                token=token,
+                diff=diff,
+                changed_files=files,
+                generator=generate_text,
+                max_tool_calls=settings.langgraph_max_tool_calls,
+                on_fallback=_fallback_logger,
+                on_success=_success_logger,
+            )
+            review = agent_result.review
+            agent_tool_calls = agent_result.tool_calls
+            _post_review_event(
+                review_id,
+                "info",
+                "LangGraph review agent completed",
+                {
+                    "elapsedMs": elapsed_ms(),
+                    "toolCallCount": len(agent_tool_calls),
+                    "toolCalls": [
+                        {
+                            "name": call.get("name"),
+                            "arguments": call.get("arguments"),
+                            "elapsedMs": call.get("elapsed_ms"),
+                            "error": call.get("error"),
+                        }
+                        for call in agent_tool_calls
+                    ],
+                },
+            )
+        else:
+            review = generate_text(
+                prompt,
+                on_fallback=_fallback_logger,
+                on_success=_success_logger,
+            )
         review = _render_references(review, references)
 
         review_eval = None
@@ -807,6 +841,15 @@ async def run_review(payload: dict[str, Any]) -> dict[str, Any]:
             "llmModel": selected_model,
             "auditProvider": audit_provider,
             "auditModel": audit_model,
+            "agentToolCalls": [
+                {
+                    "name": call.get("name"),
+                    "arguments": call.get("arguments"),
+                    "elapsedMs": call.get("elapsed_ms"),
+                    "error": call.get("error"),
+                }
+                for call in agent_tool_calls
+            ],
             "evaluation": evaluation_metrics,
             **metrics,
         }

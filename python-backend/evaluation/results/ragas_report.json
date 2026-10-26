@@ -1,0 +1,39 @@
+{
+  "profile": "deterministic",
+  "dataset": "evaluation/datasets/code_review_cases.jsonl",
+  "case_count": 4,
+  "summary": {
+    "tool_call_accuracy": 1.0,
+    "tool_call_f1": 1.0
+  },
+  "cases": [
+    {
+      "id": "auth-guard-001",
+      "scores": {
+        "tool_call_accuracy": 1.0,
+        "tool_call_f1": 1.0
+      }
+    },
+    {
+      "id": "sql-parameter-002",
+      "scores": {
+        "tool_call_accuracy": 1.0,
+        "tool_call_f1": 1.0
+      }
+    },
+    {
+      "id": "pagination-003",
+      "scores": {
+        "tool_call_accuracy": 1.0,
+        "tool_call_f1": 1.0
+      }
+    },
+    {
+      "id": "cleanup-004",
+      "scores": {
+        "tool_call_accuracy": 1.0,
+        "tool_call_f1": 1.0
+      }
+    }
+  ]
+}

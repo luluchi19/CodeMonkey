@@ -21,11 +21,19 @@ Required for indexing:
 
 Required for review pipeline:
 - `GENAI_MODEL` (default: models/gemini-2.0-flash)
+- `LANGGRAPH_ENABLED` (default: true)
+- `LANGGRAPH_MAX_TOOL_CALLS` (default: 3)
 - `DEEPSEEK_API_KEY` (optional fallback provider)
 - `DEEPSEEK_MODEL` (default: deepseek-v4-flash)
 - `LLM_FALLBACK_ORDER` (default: gemini,deepseek,nvidia,openrouter)
 - `MAX_CONTEXT_CHUNKS` (default: 6)
 - `DIFF_MAX_CHARS` (default: 20000)
+
+Optional vLLM provider (OpenAI-compatible server):
+- `VLLM_BASE_URL` (for example `http://localhost:8000/v1`)
+- `VLLM_API_KEY` (default: `token-not-needed`)
+- `VLLM_MODEL`
+- Add `vllm` to `LLM_FALLBACK_ORDER` only while the endpoint is available.
 
 Optional indexing improvements:
 - `USE_TREE_SITTER` (default: true)
@@ -45,6 +53,21 @@ Optional review evaluation:
 - `EVALUATION_ENABLED` (default: true)
 - `EVALUATION_MODEL` (default: models/gemini-2.5-flash-lite)
 - `EVALUATION_USE_TRULENS` (default: false)
+
+## LangGraph tests and RAGAS
+
+Install the separate evaluation dependencies and run the offline suite:
+
+```powershell
+pip install -r requirements-dev.txt -r requirements-eval.txt
+pytest -q
+python -m evaluation.ragas_eval --profile deterministic
+```
+
+The full RAGAS profile and vLLM benchmark procedure are documented in:
+
+- `../docs/RAGAS_EVALUATION.md`
+- `../docs/INFERENCE_BENCHMARK.md`
 
 ## Evaluation outputs
 

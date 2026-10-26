@@ -1,0 +1,2 @@
+# Install this file only inside a supported Linux + NVIDIA GPU environment.
+vllm==0.32.0

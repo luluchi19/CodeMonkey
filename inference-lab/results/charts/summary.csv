@@ -1,0 +1,6 @@
+config_label,requests,p50_ttft_ms,p95_ttft_ms,mean_output_tokens_per_second,peak_vram_gib
+modal-l40s-bf16-apc-chunked-b16-p16k-c1,4,2160.0065,3297.5640999999996,47.645250000000004,40.7559
+modal-l40s-fp8-apc-chunked-b16-p16k-c1,4,1886.145,3048.5847999999996,48.82325,40.4668
+modal-l40s-fp8-apc-chunked-b16-p8k-c4,8,2292.297,2660.0912999999996,69.523875,40.4492
+modal-l40s-fp8-apc-chunked-b32-p8k-c4,8,2602.1234999999997,5490.00005,60.410375,40.2559
+modal-l40s-fp8-apc-nochunk-b16-p16k-c1,4,1926.3045,2240.3761,73.44325,37.8203

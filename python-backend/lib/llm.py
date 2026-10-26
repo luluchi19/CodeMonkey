@@ -28,6 +28,9 @@ def _provider_model(provider: str, model_override: str | None = None) -> str:
         return f"openrouter/{settings.openrouter_model}"
     if provider == "nvidia":
         return f"openai/{settings.nvidia_nim_model}"
+    if provider == "vllm":
+        model = model_override or settings.vllm_model
+        return f"openai/{model}" if model else "unknown"
     return "unknown"
 
 
@@ -152,6 +155,20 @@ def generate_text(
                         model,
                         NVIDIA_NIM_BASE_URL,
                         settings.nvidia_nim_api_key,
+                    )
+                    print("llm_provider_selected", {"provider": provider, "model": model})
+                    if on_success:
+                        on_success(provider, model)
+                    return result
+                if provider == "vllm":
+                    if not settings.vllm_base_url or not settings.vllm_model:
+                        raise RuntimeError("VLLM_BASE_URL and VLLM_MODEL must be configured")
+                    model = _provider_model(provider, model_override)
+                    result = _generate_openai_compatible(
+                        prompt,
+                        model,
+                        settings.vllm_base_url.rstrip("/"),
+                        settings.vllm_api_key or "token-not-needed",
                     )
                     print("llm_provider_selected", {"provider": provider, "model": model})
                     if on_success:

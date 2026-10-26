@@ -17,8 +17,13 @@ class Settings(BaseSettings):
     openrouter_model: str = "qwen/qwen-2.5-7b-instruct"
     nvidia_nim_api_key: str = ""
     nvidia_nim_model: str = "meta/llama-3.3-70b-instruct"
+    vllm_base_url: str = ""
+    vllm_api_key: str = "token-not-needed"
+    vllm_model: str = ""
     llm_fallback_order: str = "gemini,deepseek,nvidia,openrouter"
     llm_retry_limit: int = 2
+    langgraph_enabled: bool = True
+    langgraph_max_tool_calls: int = 3
     max_context_chunks: int = 6
     diff_max_chars: int = 20000
     max_file_bytes: int = 256000
@@ -43,7 +48,11 @@ class Settings(BaseSettings):
     trulens_app_version: str = "v1"
     app_base_url: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()

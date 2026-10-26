@@ -7,3 +7,4 @@ tree_sitter==0.20.4
 tree_sitter_languages
 litellm
 trulens
+langgraph==1.2.17

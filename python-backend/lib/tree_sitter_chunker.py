@@ -10,6 +10,8 @@ from tree_sitter_languages import get_parser
 class CodeChunk:
     name: str
     text: str
+    start_line: int
+    end_line: int
 
 
 def _language_for_path(path: str) -> str | None:
@@ -73,7 +75,7 @@ def _query_nodes(lang: str, root) -> Iterable:
         if node.type in wanted:
             found.append(node)
         stack.extend(node.children)
-    return found
+    return sorted(found, key=lambda node: node.start_byte)
 
 
 def chunk_with_tree_sitter(path: str, content: str, max_symbols: int) -> list[CodeChunk]:
@@ -95,6 +97,13 @@ def chunk_with_tree_sitter(path: str, content: str, max_symbols: int) -> list[Co
             break
         text = source[node.start_byte : node.end_byte].decode("utf-8", errors="ignore")
         name = _extract_symbol_name(node, source)
-        chunks.append(CodeChunk(name=name, text=text))
+        chunks.append(
+            CodeChunk(
+                name=name,
+                text=text,
+                start_line=node.start_point[0] + 1,
+                end_line=node.end_point[0] + 1,
+            )
+        )
 
     return chunks

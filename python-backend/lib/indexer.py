@@ -65,6 +65,8 @@ ALLOWED_EXTENSIONS = {
     ".cjs",
     ".py",
     ".java",
+    ".html",
+    ".css",
     ".kt",
     ".kts",
     ".go",
@@ -135,7 +137,16 @@ def _should_index_file(path: str) -> bool:
     return lower.endswith(tuple(ALLOWED_EXTENSIONS))
 
 
-def _build_record(repo_id: str, path: str, chunk: str, chunk_index: int) -> dict:
+def _build_record(
+    repo_id: str,
+    path: str,
+    chunk: str,
+    chunk_index: int,
+    *,
+    symbol: str | None = None,
+    start_line: int | None = None,
+    end_line: int | None = None,
+) -> dict:
     record_id = f"{repo_id}-{path.replace('/', '_')}-{chunk_index}"
     return {
         "id": record_id,
@@ -145,6 +156,9 @@ def _build_record(repo_id: str, path: str, chunk: str, chunk_index: int) -> dict
             "path": path,
             "content": chunk,
             "chunkIndex": chunk_index,
+            "symbol": symbol or "",
+            "startLine": start_line or 0,
+            "endLine": end_line or 0,
         },
     }
 
@@ -195,8 +209,21 @@ async def index_repository(payload: dict[str, Any]) -> dict[str, Any]:
         if chunks:
             for chunk_index, chunk in enumerate(chunks):
                 try:
-                    full_text = f"File: {path}\nSymbol: {chunk.name}\n\n{chunk.text}"
-                    record = _build_record(repo_id, path, full_text, chunk_index)
+                    full_text = (
+                        f"File: {path}\n"
+                        f"Symbol: {chunk.name}\n"
+                        f"Lines: {chunk.start_line}-{chunk.end_line}\n\n"
+                        f"{chunk.text}"
+                    )
+                    record = _build_record(
+                        repo_id,
+                        path,
+                        full_text,
+                        chunk_index,
+                        symbol=chunk.name,
+                        start_line=chunk.start_line,
+                        end_line=chunk.end_line,
+                    )
                     records.append(record)
                 except Exception:
                     continue

@@ -1,0 +1,2 @@
+bf16_model_load_gib,fp8_model_load_gib,model_memory_saving_percent,bf16_kv_cache_tokens,fp8_kv_cache_tokens,kv_cache_capacity_gain_percent
+14.29,8.17,42.82715185444366,447072,555760,24.311072936797654

@@ -10,19 +10,31 @@ from lib.rag_flow_inspector import inspect_rag_flow
 app = FastAPI(title="CodeMonkey Python Sidecar")
 
 
-def validate_config() -> tuple[bool, str]:
+def validate_config(endpoint: str) -> tuple[bool, str]:
     """
     Validate required config before processing.
     Returns (is_valid, error_message)
     """
     issues = []
     
-    if not settings.pinecone_api_key:
+    if endpoint in {"repo-index", "repo-disconnect"} and not settings.pinecone_api_key:
         issues.append("PINECONE_API_KEY not configured")
-    if not settings.google_api_key:
-        issues.append("GOOGLE_API_KEY not configured")
-    if not settings.embedding_model:
+    if endpoint == "repo-index" and not settings.google_api_key:
+        issues.append("GOOGLE_API_KEY not configured for embeddings")
+    if endpoint == "repo-index" and not settings.embedding_model:
         issues.append("Embedding model not specified")
+    if endpoint == "pr-review":
+        has_llm = any(
+            (
+                settings.google_api_key,
+                settings.deepseek_api_key,
+                settings.openrouter_api_key,
+                settings.nvidia_nim_api_key,
+                settings.vllm_base_url and settings.vllm_model,
+            )
+        )
+        if not has_llm:
+            issues.append("No LLM provider is configured")
     
     if issues:
         return False, "; ".join(issues)
@@ -48,7 +60,7 @@ async def repo_index(
         raise HTTPException(status_code=401, detail="invalid signature")
 
     # Pre-flight validation: check config BEFORE processing
-    is_valid, error_msg = validate_config()
+    is_valid, error_msg = validate_config("repo-index")
     if not is_valid:
         print("config_validation_failed", {"endpoint": "repo-index", "error": error_msg})
         raise HTTPException(status_code=400, detail=f"Configuration error: {error_msg}")
@@ -83,7 +95,7 @@ async def repo_disconnect(
         raise HTTPException(status_code=401, detail="invalid signature")
 
     # Pre-flight validation: check config BEFORE processing
-    is_valid, error_msg = validate_config()
+    is_valid, error_msg = validate_config("repo-disconnect")
     if not is_valid:
         print("config_validation_failed", {"endpoint": "repo-disconnect", "error": error_msg})
         raise HTTPException(status_code=400, detail=f"Configuration error: {error_msg}")
@@ -118,7 +130,7 @@ async def pr_review(
         raise HTTPException(status_code=401, detail="invalid signature")
 
     # Pre-flight validation: check config BEFORE processing
-    is_valid, error_msg = validate_config()
+    is_valid, error_msg = validate_config("pr-review")
     if not is_valid:
         print("config_validation_failed", {"endpoint": "pr-review", "error": error_msg})
         raise HTTPException(status_code=400, detail=f"Configuration error: {error_msg}")
