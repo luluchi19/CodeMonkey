@@ -249,9 +249,9 @@ ToolCallF1 = 1.0
 LangGraph path = START -> agent -> tools -> agent -> END
 ```
 
-Snapshot manual test ngày **26/10/2026**: Pinecone index có `369` vectors, dimension `768`; truy vấn smoke-test trên một repository đã index trả về `6` context chunks và không có cảnh báo fallback. Số lượng này sẽ thay đổi sau mỗi lần connect/disconnect/re-index repository.
+Snapshot manual test: Pinecone index có `369` vectors, dimension `768`; truy vấn smoke-test trên một repository đã index trả về `6` context chunks và không có cảnh báo fallback. Số lượng này sẽ thay đổi sau mỗi lần connect/disconnect/re-index repository.
 
-### **Kết quả Modal L40S đo thực tế (26/10/2026)**
+### **Kết quả Modal L40S đo thực tế**
 
 Cùng model `Qwen2.5-Coder-7B-Instruct`, prompt thực tế `13,144` tokens, 4 measured requests, concurrency 1, prefix cache warm-up và Chunked Prefill:
 
